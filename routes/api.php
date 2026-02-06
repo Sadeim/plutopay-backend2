@@ -10,8 +10,12 @@ use App\Http\Controllers\Api\V1\WebhookEndpointController;
 use App\Http\Controllers\Api\V1\WebhookTestController;
 use App\Http\Controllers\Api\V1\PayoutController;
 use App\Http\Controllers\Api\V1\DisputeController;
+use App\Http\Controllers\Dashboard\AuthController;
 
-// Health check
+// ==========================================
+// Public Routes
+// ==========================================
+
 Route::get('/v1/health', function () {
     return response()->json([
         'status' => 'ok',
@@ -21,35 +25,39 @@ Route::get('/v1/health', function () {
     ]);
 });
 
-// API v1
-Route::prefix('v1')->middleware('api.auth')->group(function () {
+// Dashboard Auth
+Route::prefix('dashboard')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
-    // Merchant
+// Dashboard Protected
+Route::prefix('dashboard')->middleware('auth:sanctum')->group(function () {
+    Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+});
+
+// ==========================================
+// API v1 (API Key Auth)
+// ==========================================
+
+Route::prefix('v1')->middleware('api.auth')->group(function () {
     Route::get('/merchant', [MerchantController::class, 'show']);
 
-    // Transactions
     Route::get('/transactions', [TransactionController::class, 'index']);
     Route::post('/transactions', [TransactionController::class, 'store']);
     Route::get('/transactions/{id}', [TransactionController::class, 'show']);
 
-    // Refunds
     Route::post('/transactions/{transaction}/refunds', [RefundController::class, 'store']);
 
-    // Customers
     Route::apiResource('customers', CustomerController::class);
-
-    // Terminals
     Route::apiResource('terminals', TerminalController::class);
-
-    // Webhook Endpoints
     Route::apiResource('webhook-endpoints', WebhookEndpointController::class);
     Route::post('/webhook-endpoints/{endpoint}/test', [WebhookTestController::class, 'test']);
 
-    // Payouts
     Route::get('/payouts', [PayoutController::class, 'index']);
     Route::get('/payouts/{id}', [PayoutController::class, 'show']);
 
-    // Disputes
     Route::get('/disputes', [DisputeController::class, 'index']);
     Route::get('/disputes/{id}', [DisputeController::class, 'show']);
 });
