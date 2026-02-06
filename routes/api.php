@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\RefundController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\TerminalController;
 use App\Http\Controllers\Api\V1\WebhookEndpointController;
+use App\Http\Controllers\Api\V1\WebhookTestController;
 use App\Http\Controllers\Api\V1\PayoutController;
 use App\Http\Controllers\Api\V1\DisputeController;
 
@@ -42,6 +43,7 @@ Route::prefix('v1')->middleware('api.auth')->group(function () {
 
     // Webhook Endpoints
     Route::apiResource('webhook-endpoints', WebhookEndpointController::class);
+    Route::post('/webhook-endpoints/{endpoint}/test', [WebhookTestController::class, 'test']);
 
     // Payouts
     Route::get('/payouts', [PayoutController::class, 'index']);
