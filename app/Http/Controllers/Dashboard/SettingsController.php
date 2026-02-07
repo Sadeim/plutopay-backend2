@@ -51,7 +51,7 @@ class SettingsController extends Controller
         $merchant->update($request->only([
             'business_name', 'display_name', 'email', 'phone', 'website',
             'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country',
-            'default_currency', 'timezone',
+            'default_currency', 'timezone', 'processor_account_id',
         ]));
 
         return redirect()->route('dashboard.settings.index')
