@@ -33,7 +33,10 @@ class PaymentService
             ]),
             'capture_method' => ($data['capture_method'] ?? 'automatic') === 'manual' ? 'manual' : 'automatic',
             'payment_method_types' => ($data['payment_method_type'] ?? '') === 'terminal' ? ['card_present'] : null,
-            'stripe_account' => $merchant->processor_account_id,
+            'connected_account_id' => $merchant->processor_account_id,
+            'application_fee_amount' => $merchant->processor_account_id
+                ? (int) round(($data['amount']) * 3 / 100)
+                : 0,
         ];
 
         if (!empty($data['payment_method'])) {

@@ -42,8 +42,14 @@ class StripeAdapter implements PaymentProcessorInterface
         if (isset($data['capture_method'])) {
             $params['capture_method'] = $data['capture_method'];
         }
-        if (isset($data['stripe_account'])) {
-            $params['stripe_account'] = $data['stripe_account'];
+        // Stripe Connect: Destination Charges with platform fee
+        if (isset($data['connected_account_id']) && $data['connected_account_id']) {
+            $params['on_behalf_of'] = $data['connected_account_id'];
+            $params['transfer_data'] = ['destination' => $data['connected_account_id']];
+            
+            if (isset($data['application_fee_amount']) && $data['application_fee_amount'] > 0) {
+                $params['application_fee_amount'] = (int) $data['application_fee_amount'];
+            }
         }
 
         $intent = $this->stripe->paymentIntents->create(array_filter($params));

@@ -47,6 +47,8 @@ Route::middleware('auth')->prefix('dashboard')->name('dashboard.')->group(functi
     // Terminals
     Route::get('/terminals', [TerminalController::class, 'index'])->name('terminals.index');
     Route::post('/terminals', [TerminalController::class, 'store'])->name('terminals.store');
+    Route::post('/terminals/fetch-readers', [TerminalController::class, 'fetchReaders'])->name('terminals.fetch-readers');
+    Route::post('/terminals/import', [TerminalController::class, 'importReaders'])->name('terminals.import');
     Route::put('/terminals/{id}', [TerminalController::class, 'update'])->name('terminals.update');
     Route::delete('/terminals/{id}', [TerminalController::class, 'destroy'])->name('terminals.destroy');
 
@@ -57,6 +59,7 @@ Route::middleware('auth')->prefix('dashboard')->name('dashboard.')->group(functi
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
     Route::post('/pos/charge', [PosController::class, 'charge'])->name('pos.charge');
     Route::get('/pos/status/{id}', [PosController::class, 'status'])->name('pos.status');
+    Route::post('/pos/cancel/{id}', [PosController::class, 'cancel'])->name('pos.cancel');
 
     // API Keys
     Route::get('/api-keys', [ApiKeyController::class, 'index'])->name('api-keys.index');

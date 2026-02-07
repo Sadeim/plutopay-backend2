@@ -82,8 +82,7 @@ class PosController extends Controller
 
             $reader = $stripe->terminal->readers->processPaymentIntent(
                 $terminal->processor_terminal_id,
-                ['payment_intent' => $transaction->processor_transaction_id],
-                ['stripe_account' => $merchant->processor_account_id]
+                ['payment_intent' => $transaction->processor_transaction_id]
             );
 
             return response()->json([
@@ -123,15 +122,8 @@ class PosController extends Controller
                         : config('services.stripe.secret')
                 );
 
-                $opts = [];
-                if ($merchant->processor_account_id) {
-                    $opts['stripe_account'] = $merchant->processor_account_id;
-                }
-
                 $intent = $stripe->paymentIntents->retrieve(
-                    $transaction->processor_transaction_id,
-                    [],
-                    $opts
+                    $transaction->processor_transaction_id
                 );
 
                 $newStatus = match($intent->status) {
@@ -172,4 +164,49 @@ class PosController extends Controller
             'amount' => $transaction->amount,
         ]);
     }
+    /**
+     * Cancel a pending payment
+     */
+    public function cancel(Request $request, string $id)
+    {
+        $merchant = auth()->user()->merchant;
+        $transaction = \App\Models\Transaction::where('merchant_id', $merchant->id)->findOrFail($id);
+
+        if (!in_array($transaction->status, ['pending', 'requires_action'])) {
+            return response()->json(['success' => false, 'message' => 'Cannot cancel this payment'], 400);
+        }
+
+        try {
+            $stripe = new \Stripe\StripeClient(
+                $merchant->test_mode
+                    ? config('services.stripe.test_secret')
+                    : config('services.stripe.secret')
+            );
+
+            // Cancel on Stripe
+            if ($transaction->processor_transaction_id) {
+                $stripe->paymentIntents->cancel($transaction->processor_transaction_id);
+            }
+
+            // Cancel reader action
+            $terminal = \App\Models\Terminal::where('merchant_id', $merchant->id)->first();
+            if ($terminal && $terminal->processor_terminal_id) {
+                try {
+                    $stripe->terminal->readers->cancelAction($terminal->processor_terminal_id);
+                } catch (\Exception $e) {
+                    // Reader might not have active action
+                }
+            }
+
+            $transaction->update([
+                'status' => 'canceled',
+                'failed_at' => now(),
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Payment cancelled']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
 }

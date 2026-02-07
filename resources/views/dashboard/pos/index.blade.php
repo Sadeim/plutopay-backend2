@@ -268,6 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
         newChargeBtn.classList.add('hidden');
         statusText.textContent = 'Sending to terminal...';
         statusSub.textContent = 'Waiting for customer to present card';
+        if (document.getElementById('cancelPaymentBtn')) document.getElementById('cancelPaymentBtn').classList.add('hidden');
 
         try {
             const res = await fetch('{{ route("dashboard.pos.charge") }}', {
@@ -289,6 +290,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 statusText.textContent = 'Waiting for customer...';
                 statusSub.textContent = 'Present card on terminal';
+                if (document.getElementById('cancelPaymentBtn')) document.getElementById('cancelPaymentBtn').classList.remove('hidden');
+                currentTxnId = data.transaction.id;
 
                 // Poll for status
                 pollStatus(data.transaction.id);
@@ -300,34 +303,75 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    let currentInterval = null;
+    let currentTimeout = null;
+    let currentTxnId = null;
+
     function pollStatus(txnId) {
         let attempts = 0;
-        const maxAttempts = 60; // 2 minutes
+        const maxAttempts = 90; // 90 x 2s = 3 minutes
 
-        const interval = setInterval(async () => {
+        currentInterval = setInterval(async () => {
             attempts++;
-            if (attempts > maxAttempts) {
-                clearInterval(interval);
-                showError('Payment timed out. Check terminal.');
+
+            // Auto-cancel after 3 minutes
+            if (attempts >= maxAttempts) {
+                clearInterval(currentInterval);
+                cancelPayment(txnId);
+                showError('Payment auto-cancelled (3 min timeout)');
                 return;
             }
 
             try {
-                const res = await fetch(`/dashboard/pos/status/${txnId}`, {
+                const res = await fetch('/dashboard/pos/status/' + txnId, {
                     headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
                 });
                 const data = await res.json();
 
                 if (data.status === 'succeeded') {
-                    clearInterval(interval);
+                    clearInterval(currentInterval);
                     showSuccess(data);
                 } else if (data.status === 'failed' || data.status === 'canceled') {
-                    clearInterval(interval);
+                    clearInterval(currentInterval);
                     showError('Payment ' + data.status);
                 }
             } catch (e) { /* continue polling */ }
         }, 2000);
     }
+
+    async function cancelPayment(txnId) {
+        try {
+            await fetch('/dashboard/pos/cancel/' + txnId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                },
+            });
+        } catch (e) { /* ignore */ }
+    }
+
+    // Create cancel button
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'w-full mt-3 px-4 py-2.5 rounded-lg border border-red-200 bg-red-50 text-red-600 font-medium text-sm hover:bg-red-100 transition-colors hidden';
+    cancelBtn.id = 'cancelPaymentBtn';
+    cancelBtn.innerHTML = '✕ Cancel Payment';
+    statusPanel.appendChild(cancelBtn);
+
+    cancelBtn.addEventListener('click', async function() {
+        if (!currentTxnId) return;
+        cancelBtn.disabled = true;
+        cancelBtn.textContent = 'Cancelling...';
+
+        if (currentInterval) clearInterval(currentInterval);
+        if (currentTimeout) clearTimeout(currentTimeout);
+
+        try { await cancelPayment(currentTxnId); } catch(e) {}
+        cancelBtn.disabled = false;
+        cancelBtn.innerHTML = '✕ Cancel Payment';
+        showError('Payment cancelled');
+    });
 
     function showSuccess(data) {
         statusSpinner.classList.add('hidden');
@@ -336,6 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusText.textContent = 'Payment Successful!';
         statusSub.textContent = sym + display.value + ' charged';
         newChargeBtn.classList.remove('hidden');
+        cancelBtn.classList.add('hidden');
     }
 
     function showError(msg) {
@@ -345,6 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusText.textContent = 'Payment Failed';
         statusSub.textContent = msg;
         newChargeBtn.classList.remove('hidden');
+        cancelBtn.classList.add('hidden');
         chargeBtn.disabled = false;
     }
 
@@ -354,7 +400,9 @@ document.addEventListener('DOMContentLoaded', function() {
         statusPanel.classList.add('hidden');
         document.querySelector('#description').value = '';
         chargeBtn.disabled = true;
+        currentTxnId = null;
     });
+
 });
 </script>
 @endpush

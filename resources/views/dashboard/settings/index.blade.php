@@ -133,6 +133,37 @@
                             </div>
                         </div>
                     </div>
+                            <hr class="border-input">
+                            <h3 class="text-base font-semibold text-foreground">Payment Processor</h3>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-foreground">Stripe Connected Account ID</label>
+                                    <input class="kt-input font-mono" name="processor_account_id" value="{{ $merchant->processor_account_id }}" placeholder="acct_xxxxxxxxxx">
+                                    <span class="text-xs text-secondary-foreground">Your Stripe Connect account ID. Payments will be processed on behalf of this account.</span>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-foreground">Mode</label>
+                                    <div class="flex items-center gap-3 mt-1">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" name="test_mode" value="0" {{ !$merchant->test_mode ? 'checked' : '' }} class="rounded">
+                                            <span class="text-sm text-foreground">Live</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" name="test_mode" value="1" {{ $merchant->test_mode ? 'checked' : '' }} class="rounded">
+                                            <span class="text-sm text-foreground">Test</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            @if($merchant->processor_account_id)
+                            <div class="flex items-center gap-2 p-3 rounded-md bg-success/10 text-sm" style="color:#22c55e">
+                                <i class="ki-filled ki-check-circle"></i>
+                                Connected: {{ $merchant->processor_account_id }}
+                            </div>
+                            @endif
+                        </div>
+                    </div>
                     <div class="kt-card-footer justify-end">
                         <button type="submit" class="kt-btn kt-btn-primary">Save Changes</button>
                     </div>
