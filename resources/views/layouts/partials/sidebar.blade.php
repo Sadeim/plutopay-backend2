@@ -1,8 +1,8 @@
 <div class="kt-sidebar bg-background border-e border-e-border fixed top-0 bottom-0 z-20 hidden lg:flex flex-col items-stretch shrink-0 [--kt-drawer-enable:true] lg:[--kt-drawer-enable:false]" data-kt-drawer="true" data-kt-drawer-class="kt-drawer kt-drawer-start top-0 bottom-0" id="sidebar">
     <div class="kt-sidebar-header hidden lg:flex items-center relative justify-between px-3 lg:px-6 shrink-0" id="sidebar_header">
         <a href="{{ route('dashboard.index') }}">
-            <span class="default-logo text-xl font-bold text-primary min-h-[22px]">PlutoPay</span>
-            <span class="small-logo text-xl font-bold text-primary min-h-[22px]">PP</span>
+            <img src="/images/plutopay.svg" alt="PlutoPay" class="default-logo h-32 w-auto">
+            <img src="/images/plutopay.svg" alt="PP" class="small-logo h-14 w-auto">
         </a>
         <button class="kt-btn kt-btn-outline kt-btn-icon size-[30px] absolute start-full top-2/4 -translate-x-2/4 -translate-y-2/4 rtl:translate-x-2/4" data-kt-toggle="body" data-kt-toggle-class="kt-sidebar-collapse" id="sidebar_toggle">
             <i class="ki-filled ki-black-left-line kt-toggle-active:rotate-180 transition-all duration-300"></i>

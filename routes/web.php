@@ -12,6 +12,7 @@ use App\Http\Controllers\Dashboard\SettingsController;
 use App\Http\Controllers\Dashboard\TerminalController;
 use App\Http\Controllers\Dashboard\PayoutController;
 use App\Http\Controllers\Dashboard\PosController;
+use App\Http\Controllers\Pos\StandalonePosController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,7 +21,8 @@ use App\Http\Controllers\Dashboard\PosController;
 */
 
 Route::get('/', function () {
-    return auth()->check() ? redirect('/dashboard') : redirect()->route('login');
+    if (auth()->check()) return redirect('/dashboard');
+    return view('landing');
 });
 
 // Auth
@@ -29,6 +31,39 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [WebAuthController::class, 'login']);
     Route::get('/register', [WebAuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [WebAuthController::class, 'register']);
+});
+
+
+
+// Auto-redirect /pos to merchant POS if logged in
+Route::get('/pos', function () {
+    if (auth()->check()) {
+        return redirect('/pos/' . auth()->user()->merchant_id . '/terminal');
+    }
+    return view('pos.standalone.select-merchant');
+})->name('pos.redirect');
+
+Route::post("/pos", function (Illuminate\Http\Request $request) {
+    $request->validate(["email" => "required|email", "password" => "required"]);
+    if (auth()->attempt($request->only("email", "password"))) {
+        $request->session()->regenerate();
+        $user = auth()->user();
+        return redirect("/pos/" . $user->merchant_id . "/terminal");
+    }
+    return back()->with("error", "Invalid credentials.")->withInput($request->only("email"));
+})->name("pos.login");
+
+// Standalone POS (external link for merchants)
+Route::prefix('pos/{merchantId}')->name('standalone.pos.')->group(function () {
+    Route::get('/', [StandalonePosController::class, 'login'])->name('login');
+    Route::post('/authenticate', [StandalonePosController::class, 'authenticate'])->name('authenticate');
+    Route::middleware('auth')->group(function () {
+        Route::get('/terminal', [StandalonePosController::class, 'terminal'])->name('terminal');
+        Route::post('/charge', [StandalonePosController::class, 'charge'])->name('charge');
+        Route::get('/status/{txnId}', [StandalonePosController::class, 'status'])->name('status');
+        Route::post('/cancel/{txnId}', [StandalonePosController::class, 'cancel'])->name('cancel');
+        Route::post('/logout', [StandalonePosController::class, 'logout'])->name('logout');
+    });
 });
 
 // Dashboard
