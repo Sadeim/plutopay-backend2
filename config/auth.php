@@ -7,7 +7,7 @@ return [
     ],
 
     'guards' => [
-        'web' => [
+        'admin' => [            'driver' => 'session',            'provider' => 'admins',        ],        'web' => [
             'driver' => 'session',
             'provider' => 'merchant_users',
         ],
@@ -25,6 +25,11 @@ return [
         'merchant_users' => [
             'driver' => 'eloquent',
             'model' => App\Models\MerchantUser::class,
+        ],
+
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Admin::class,
         ],
     ],
 

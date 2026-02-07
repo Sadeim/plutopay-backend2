@@ -115,3 +115,32 @@ Route::middleware('auth')->prefix('dashboard')->name('dashboard.')->group(functi
     Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
     Route::put('/settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Admin Routes
+|--------------------------------------------------------------------------
+*/
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminMerchantController;
+use App\Http\Controllers\Admin\AdminTransactionController;
+use App\Http\Controllers\Admin\AdminSettingsController;
+
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AdminAuthController::class, 'login']);
+
+    Route::middleware(\App\Http\Middleware\AdminAuth::class)->group(function () {
+        Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+        Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/merchants', [AdminMerchantController::class, 'index'])->name('merchants.index');
+        Route::get("/merchants/create", [AdminMerchantController::class, "create"])->name("merchants.create");
+        Route::post("/merchants", [AdminMerchantController::class, "store"])->name("merchants.store");
+        Route::get("/merchants/{id}", [AdminMerchantController::class, "show"])->name("merchants.show");
+        Route::get("/merchants/{id}/edit", [AdminMerchantController::class, "edit"])->name("merchants.edit");
+        Route::put("/merchants/{id}", [AdminMerchantController::class, "update"])->name("merchants.update");
+        Route::get('/transactions', [AdminTransactionController::class, 'index'])->name('transactions.index');
+        Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings.index');
+    });
+});
