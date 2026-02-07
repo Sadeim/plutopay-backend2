@@ -2,115 +2,218 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Controller;
 use App\Models\Transaction;
-use App\Services\Payment\PaymentProcessorFactory;
+use App\Http\Resources\TransactionResource;
+use App\Http\Resources\TransactionCollection;
+use App\Services\Payment\PaymentService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use App\Http\Controllers\Controller;
 
 class TransactionController extends Controller
 {
+    protected PaymentService $paymentService;
+
+    public function __construct(PaymentService $paymentService)
+    {
+        $this->paymentService = $paymentService;
+    }
+
+    /**
+     * List transactions.
+     *
+     * GET /v1/transactions
+     */
     public function index(Request $request)
     {
         $merchant = $request->attributes->get('merchant');
 
-        $transactions = Transaction::where('merchant_id', $merchant->id)
-            ->where('is_test', $request->input('is_test', $merchant->test_mode))
-            ->when($request->input('status'), fn($q, $s) => $q->where('status', $s))
-            ->when($request->input('type'), fn($q, $t) => $q->where('type', $t))
-            ->orderByDesc('created_at')
-            ->paginate($request->input('per_page', 20));
+        $query = Transaction::where('merchant_id', $merchant->id);
 
-        return response()->json($transactions);
+        // Search
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('reference', 'ilike', "%{$search}%")
+                    ->orWhere('description', 'ilike', "%{$search}%")
+                    ->orWhere('receipt_email', 'ilike', "%{$search}%");
+            });
+        }
+
+        // Filters
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+        if ($method = $request->input('payment_method_type')) {
+            $query->where('payment_method_type', $method);
+        }
+        if ($dateFrom = $request->input('date_from')) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo = $request->input('date_to')) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        // Sorting
+        $sortField = $request->input('sortField', 'created_at');
+        $sortOrder = $request->input('sortOrder', 'desc');
+        $allowedFields = ['reference', 'amount', 'status', 'payment_method_type', 'created_at', 'currency'];
+        $indexMap = ['0' => 'reference', '1' => 'amount', '2' => 'status', '3' => 'payment_method_type', '4' => 'receipt_email', '5' => 'created_at'];
+
+        if (isset($indexMap[$sortField])) {
+            $sortField = $indexMap[$sortField];
+        } elseif (!in_array($sortField, $allowedFields)) {
+            $sortField = 'created_at';
+        }
+        $sortOrder = in_array($sortOrder, ['asc', 'desc']) ? $sortOrder : 'desc';
+        $query->orderBy($sortField, $sortOrder);
+
+        $size = min(100, max(1, (int) $request->input('size', 10)));
+        $paginated = $query->paginate($size, ['*'], 'page', $request->input('page', 1));
+
+        return new TransactionCollection($paginated);
     }
 
+    /**
+     * Create a payment.
+     *
+     * POST /v1/transactions
+     *
+     * Body:
+     *   amount (required, integer, in cents)
+     *   currency (string, default: merchant default)
+     *   payment_method (string, Stripe PM id)
+     *   payment_method_type (string: card, wallet, bank_transfer, terminal)
+     *   confirm (boolean, default: false)
+     *   capture_method (string: automatic|manual)
+     *   customer_id (uuid)
+     *   description (string)
+     *   receipt_email (string)
+     *   return_url (string)
+     *   metadata (object)
+     *   idempotency_key (string)
+     *   billing_address (object)
+     *   shipping_address (object)
+     */
+    public function store(Request $request)
+    {
+        $merchant = $request->attributes->get('merchant');
+
+        $request->validate([
+            'amount' => 'required|integer|min:50',
+            'currency' => 'sometimes|string|size:3',
+            'payment_method' => 'sometimes|string',
+            'payment_method_type' => 'sometimes|string|in:card,wallet,bank_transfer,terminal',
+            'confirm' => 'sometimes|boolean',
+            'capture_method' => 'sometimes|string|in:automatic,manual',
+            'customer_id' => 'sometimes|uuid',
+            'description' => 'sometimes|string|max:500',
+            'receipt_email' => 'sometimes|email',
+            'return_url' => 'sometimes|url',
+            'metadata' => 'sometimes|array',
+            'idempotency_key' => 'sometimes|string|max:255',
+            'billing_address' => 'sometimes|array',
+            'shipping_address' => 'sometimes|array',
+        ]);
+
+        // Idempotency check
+        if ($idempotencyKey = $request->input('idempotency_key')) {
+            $existing = Transaction::where('merchant_id', $merchant->id)
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+
+            if ($existing) {
+                return response()->json([
+                    'data' => new TransactionResource($existing),
+                    'message' => 'Idempotent request - returning existing transaction.',
+                ], 200);
+            }
+        }
+
+        try {
+            $transaction = $this->paymentService->createPayment($merchant, $request->all());
+
+            $response = new TransactionResource($transaction);
+            $data = $response->toArray(request());
+
+            // Include client_secret for frontend use
+            if ($transaction->client_secret) {
+                $data['client_secret'] = $transaction->client_secret;
+            }
+
+            return response()->json(['data' => $data], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => [
+                    'type' => 'payment_error',
+                    'message' => $e->getMessage(),
+                ]
+            ], 400);
+        }
+    }
+
+    /**
+     * Show a transaction.
+     *
+     * GET /v1/transactions/{id}
+     */
     public function show(Request $request, string $id)
     {
         $merchant = $request->attributes->get('merchant');
 
         $transaction = Transaction::where('merchant_id', $merchant->id)
+            ->with('customer')
             ->findOrFail($id);
 
-        return response()->json($transaction);
+        return new TransactionResource($transaction);
     }
 
-    public function store(Request $request)
+    /**
+     * Capture an authorized payment.
+     *
+     * POST /v1/transactions/{id}/capture
+     */
+    public function capture(Request $request, string $id)
     {
         $merchant = $request->attributes->get('merchant');
-        $isTest = $request->input('is_test', $merchant->test_mode);
+        $transaction = Transaction::where('merchant_id', $merchant->id)->findOrFail($id);
 
         $request->validate([
-            'amount' => 'required|integer|min:1',
-            'currency' => 'sometimes|string|size:3',
-            'payment_method' => 'sometimes|string',
-            'customer_id' => 'sometimes|uuid',
-            'description' => 'sometimes|string|max:500',
-            'metadata' => 'sometimes|array',
-            'idempotency_key' => 'sometimes|string|max:255',
+            'amount' => 'sometimes|integer|min:1',
         ]);
 
-        // Idempotency check
-        if ($request->idempotency_key) {
-            $existing = Transaction::where('merchant_id', $merchant->id)
-                ->where('idempotency_key', $request->idempotency_key)
-                ->first();
-            if ($existing) return response()->json($existing);
-        }
-
-        // Create via processor
-        $processor = PaymentProcessorFactory::make($merchant);
-
         try {
-            $result = $processor->createPayment([
-                'amount' => $request->amount,
-                'currency' => $request->input('currency', $merchant->default_currency),
-                'payment_method' => $request->payment_method,
-                'description' => $request->description,
-                'metadata' => $request->input('metadata', []),
-                'confirm' => $request->boolean('confirm', false),
-            ]);
+            $transaction = $this->paymentService->capturePayment(
+                $merchant,
+                $transaction,
+                $request->input('amount')
+            );
 
-            $transaction = Transaction::create([
-                'merchant_id' => $merchant->id,
-                'customer_id' => $request->customer_id,
-                'reference' => 'txn_' . Str::random(24),
-                'type' => 'payment',
-                'status' => $result['status'],
-                'amount' => $request->amount,
-                'currency' => $request->input('currency', $merchant->default_currency),
-                'payment_method_type' => $request->payment_method ? 'card' : null,
-                'source' => 'api',
-                'processor_type' => $merchant->processor_type,
-                'processor_transaction_id' => $result['processor_id'],
-                'processor_response' => $result['raw'] ?? null,
-                'idempotency_key' => $request->idempotency_key,
-                'description' => $request->description,
-                'is_test' => $isTest,
-                'metadata' => $request->input('metadata'),
-                'captured_at' => $result['status'] === 'succeeded' ? now() : null,
-            ]);
-
-            return response()->json($transaction, 201);
+            return new TransactionResource($transaction);
 
         } catch (\Exception $e) {
-            $transaction = Transaction::create([
-                'merchant_id' => $merchant->id,
-                'reference' => 'txn_' . Str::random(24),
-                'type' => 'payment',
-                'status' => 'failed',
-                'amount' => $request->amount,
-                'currency' => $request->input('currency', $merchant->default_currency),
-                'source' => 'api',
-                'processor_type' => $merchant->processor_type,
-                'failure_reason' => $e->getMessage(),
-                'is_test' => $isTest,
-                'idempotency_key' => $request->idempotency_key,
-                'failed_at' => now(),
-            ]);
-
             return response()->json([
-                'error' => ['type' => 'payment_error', 'message' => $e->getMessage()],
-                'transaction' => $transaction,
+                'error' => ['type' => 'capture_error', 'message' => $e->getMessage()]
+            ], 400);
+        }
+    }
+
+    /**
+     * Cancel a payment.
+     *
+     * POST /v1/transactions/{id}/cancel
+     */
+    public function cancel(Request $request, string $id)
+    {
+        $merchant = $request->attributes->get('merchant');
+        $transaction = Transaction::where('merchant_id', $merchant->id)->findOrFail($id);
+
+        try {
+            $transaction = $this->paymentService->cancelPayment($merchant, $transaction);
+            return new TransactionResource($transaction);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => ['type' => 'cancel_error', 'message' => $e->getMessage()]
             ], 400);
         }
     }

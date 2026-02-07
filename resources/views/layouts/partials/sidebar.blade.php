@@ -1,6 +1,6 @@
 <div class="kt-sidebar bg-background border-e border-e-border fixed top-0 bottom-0 z-20 hidden lg:flex flex-col items-stretch shrink-0 [--kt-drawer-enable:true] lg:[--kt-drawer-enable:false]" data-kt-drawer="true" data-kt-drawer-class="kt-drawer kt-drawer-start top-0 bottom-0" id="sidebar">
     <div class="kt-sidebar-header hidden lg:flex items-center relative justify-between px-3 lg:px-6 shrink-0" id="sidebar_header">
-        <a href="{{ route('dashboard') }}">
+        <a href="{{ route('dashboard.index') }}">
             <span class="default-logo text-xl font-bold text-primary min-h-[22px]">PlutoPay</span>
             <span class="small-logo text-xl font-bold text-primary min-h-[22px]">PP</span>
         </a>
@@ -14,7 +14,7 @@
 
                 {{-- Dashboard --}}
                 <div class="kt-menu-item">
-                    <a class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->routeIs('dashboard') && !request()->is('dashboard/*') ? 'active' : '' }}" href="{{ route('dashboard') }}" tabindex="0">
+                    <a class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->routeIs('dashboard') && !request()->is('dashboard/*') ? 'active' : '' }}" href="{{ route('dashboard.index') }}" tabindex="0">
                         <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
                             <i class="ki-filled ki-element-11 text-lg"></i>
                         </span>
@@ -62,6 +62,16 @@
                     </a>
                 </div>
 
+                {{-- POS --}}
+                <div class="kt-menu-item">
+                    <a class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->routeIs('dashboard.pos*') ? 'active' : '' }}" href="{{ route('dashboard.pos.index') }}" tabindex="0">
+                        <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
+                            <i class="ki-filled ki-handcart text-lg"></i>
+                        </span>
+                        <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary">POS</span>
+                    </a>
+                </div>
+
                 {{-- Separator --}}
                 <div class="kt-menu-item pt-2.25 pb-px">
                     <span class="kt-menu-heading uppercase text-xs font-medium text-muted-foreground ps-[10px] pe-[10px]">Developers</span>
@@ -94,7 +104,7 @@
 
                 {{-- Settings --}}
                 <div class="kt-menu-item">
-                    <a class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->routeIs('dashboard.settings*') ? 'active' : '' }}" href="{{ route('dashboard.settings') }}" tabindex="0">
+                    <a class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->routeIs('dashboard.settings*') ? 'active' : '' }}" href="{{ route('dashboard.settings.index') }}" tabindex="0">
                         <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
                             <i class="ki-filled ki-setting-2 text-lg"></i>
                         </span>

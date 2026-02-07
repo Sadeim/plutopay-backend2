@@ -30,7 +30,7 @@ class WebAuthController extends Controller
                 'last_login_at' => now(),
                 'last_login_ip' => $request->ip(),
             ]);
-            return redirect()->route('dashboard');
+            return redirect()->route('dashboard.index');
         }
 
         return back()->withErrors(['email' => 'Invalid credentials.'])->withInput();
@@ -87,7 +87,7 @@ class WebAuthController extends Controller
         ]);
 
         Auth::login($user);
-        return redirect()->route('dashboard');
+        return redirect()->route('dashboard.index');
     }
 
     public function logout(Request $request)

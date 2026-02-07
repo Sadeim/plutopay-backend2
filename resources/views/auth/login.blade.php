@@ -40,5 +40,5 @@
     </label>
     <button class="kt-btn kt-btn-primary flex justify-center grow" form="sign_in_form" type="submit">Sign In</button>
 
-    <form id="sign_in_form" method="POST" action="{{ route('login.submit') }}" class="hidden">@csrf</form>
+    <form id="sign_in_form" method="POST" action="{{ url('/login') }}" class="hidden">@csrf</form>
 @endsection

@@ -1,7 +1,7 @@
 <header class="kt-header fixed top-0 z-10 start-0 end-0 flex items-stretch shrink-0 bg-background" data-kt-sticky="true" data-kt-sticky-name="header" id="header">
     <div class="container-fixed flex justify-between items-stretch lg:gap-4" id="header_container">
         <div class="flex gap-1 lg:hidden items-center -ml-1">
-            <a href="{{ route('dashboard') }}">
+            <a href="{{ route('dashboard.index') }}">
                 <span class="text-lg font-bold text-primary">PlutoPay</span>
             </a>
         </div>
@@ -37,7 +37,7 @@
                         </div>
                         <div class="kt-menu-separator"></div>
                         <div class="flex flex-col">
-                            <a class="kt-menu-item kt-menu-link" href="{{ route('dashboard.settings') }}">
+                            <a class="kt-menu-item kt-menu-link" href="{{ route('dashboard.settings.index') }}">
                                 <span class="kt-menu-icon"><i class="ki-filled ki-setting-2"></i></span>
                                 <span class="kt-menu-title">Settings</span>
                             </a>

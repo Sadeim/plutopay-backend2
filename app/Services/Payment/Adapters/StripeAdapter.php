@@ -23,6 +23,7 @@ class StripeAdapter implements PaymentProcessorInterface
             'payment_method' => $data['payment_method'] ?? null,
             'confirm' => $data['confirm'] ?? false,
             'description' => $data['description'] ?? null,
+            
             'metadata' => $data['metadata'] ?? [],
         ];
 
@@ -31,6 +32,12 @@ class StripeAdapter implements PaymentProcessorInterface
         }
         if (isset($data['return_url'])) {
             $params['return_url'] = $data['return_url'];
+        }
+        // Payment method types: card_present for terminal, automatic for online
+        if (isset($data['payment_method_types']) && is_array($data['payment_method_types'])) {
+            $params['payment_method_types'] = $data['payment_method_types'];
+        } else {
+            $params['automatic_payment_methods'] = ['enabled' => true, 'allow_redirects' => 'never'];
         }
         if (isset($data['capture_method'])) {
             $params['capture_method'] = $data['capture_method'];
