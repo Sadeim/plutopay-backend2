@@ -12,6 +12,9 @@ class TerminalController extends Controller
     {
         $merchant = auth()->user()->merchant;
 
+        // Auto-sync terminal status from Stripe
+        $this->syncTerminalStatus($merchant);
+
         $terminals = Terminal::where('merchant_id', $merchant->id)
             ->orderByDesc('status')
             ->orderByDesc('created_at')
@@ -27,9 +30,6 @@ class TerminalController extends Controller
         return view('dashboard.terminals.index', compact('terminals', 'stats'));
     }
 
-    /**
-     * Fetch readers from Stripe by Location ID.
-     */
     public function fetchReaders(Request $request)
     {
         $merchant = auth()->user()->merchant;
@@ -49,7 +49,6 @@ class TerminalController extends Controller
                 ['location' => $request->location_id, 'limit' => 100]
             );
 
-            // Get already imported terminal IDs
             $existingIds = Terminal::where('merchant_id', $merchant->id)
                 ->pluck('processor_terminal_id')
                 ->toArray();
@@ -68,7 +67,6 @@ class TerminalController extends Controller
                 ];
             }
 
-            // Get location details
             $location = $stripe->terminal->locations->retrieve(
                 $request->location_id
             );
@@ -101,9 +99,6 @@ class TerminalController extends Controller
         }
     }
 
-    /**
-     * Import selected readers from Stripe.
-     */
     public function importReaders(Request $request)
     {
         $merchant = auth()->user()->merchant;
@@ -123,7 +118,6 @@ class TerminalController extends Controller
         $imported = 0;
 
         foreach ($request->readers as $reader) {
-            // Skip if already exists
             $exists = Terminal::where('merchant_id', $merchant->id)
                 ->where('processor_terminal_id', $reader['id'])
                 ->exists();
@@ -151,9 +145,6 @@ class TerminalController extends Controller
             ->with('success', "{$imported} terminal(s) imported successfully!");
     }
 
-    /**
-     * Register a new terminal with registration code.
-     */
     public function store(Request $request)
     {
         $merchant = auth()->user()->merchant;
@@ -172,12 +163,6 @@ class TerminalController extends Controller
                     : config('services.stripe.secret')
             );
 
-            $opts = [];
-            if ($merchant->processor_account_id) {
-                $opts['stripe_account'] = $merchant->processor_account_id;
-            }
-
-            // Create location first
             $connectOpts = [];
             if ($merchant->processor_account_id) {
                 $connectOpts['stripe_account'] = $merchant->processor_account_id;
@@ -194,7 +179,6 @@ class TerminalController extends Controller
                 ],
             ], $connectOpts);
 
-            // Register reader on connected account
             $reader = $stripe->terminal->readers->create([
                 'registration_code' => $request->registration_code,
                 'label' => $request->name,
@@ -246,5 +230,31 @@ class TerminalController extends Controller
 
         return redirect()->route('dashboard.terminals.index')
             ->with('success', 'Terminal removed.');
+    }
+
+    protected function syncTerminalStatus($merchant)
+    {
+        try {
+            $stripe = new \Stripe\StripeClient(
+                $merchant->test_mode
+                    ? config('services.stripe.test_secret')
+                    : config('services.stripe.secret')
+            );
+
+            $terminals = Terminal::where('merchant_id', $merchant->id)->get();
+
+            foreach ($terminals as $terminal) {
+                if (!$terminal->processor_terminal_id) continue;
+                try {
+                    $reader = $stripe->terminal->readers->retrieve($terminal->processor_terminal_id);
+                    $terminal->update([
+                        'status' => $reader->status === 'online' ? 'online' : 'offline',
+                        'last_seen_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                    $terminal->update(['status' => 'offline']);
+                }
+            }
+        } catch (\Exception $e) {}
     }
 }
