@@ -70,6 +70,43 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Advanced Filters --}}
+            <div class="px-5 pb-3 pt-0">
+                <div class="flex flex-wrap items-end gap-3">
+                    {{-- Date Range --}}
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs text-secondary-foreground font-medium">From Date</label>
+                        <input type="date" class="kt-input kt-input-sm w-40" id="dateFrom" />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs text-secondary-foreground font-medium">To Date</label>
+                        <input type="date" class="kt-input kt-input-sm w-40" id="dateTo" />
+                    </div>
+
+                    {{-- Amount Range --}}
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs text-secondary-foreground font-medium">Min Amount ($)</label>
+                        <input type="number" step="0.01" min="0" class="kt-input kt-input-sm w-32" id="amountMin" placeholder="0.00" />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs text-secondary-foreground font-medium">Max Amount ($)</label>
+                        <input type="number" step="0.01" min="0" class="kt-input kt-input-sm w-32" id="amountMax" placeholder="0.00" />
+                    </div>
+
+                    {{-- Quick Date Buttons --}}
+                    <div class="flex items-center gap-1.5 ml-auto">
+                        <button class="kt-btn kt-btn-xs kt-btn-outline date-quick" data-range="today">Today</button>
+                        <button class="kt-btn kt-btn-xs kt-btn-outline date-quick" data-range="7d">7 Days</button>
+                        <button class="kt-btn kt-btn-xs kt-btn-outline date-quick" data-range="30d">30 Days</button>
+                        <button class="kt-btn kt-btn-xs kt-btn-outline date-quick" data-range="90d">90 Days</button>
+                        <button class="kt-btn kt-btn-xs kt-btn-light" id="clearFilters">
+                            <i class="ki-filled ki-cross text-xs"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="kt-card-table kt-scrollable-x-auto">
                 <table class="kt-table" id="txnTable">
                     <thead>
@@ -155,6 +192,10 @@
             const methodFilter = document.getElementById('methodFilter');
             const searchInput = document.getElementById('searchInput');
             const perPage = document.getElementById('perPage');
+            const dateFrom = document.getElementById('dateFrom');
+            const dateTo = document.getElementById('dateTo');
+            const amountMin = document.getElementById('amountMin');
+            const amountMax = document.getElementById('amountMax');
 
             async function fetchTransactions() {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-secondary-foreground">Loading...</td></tr>';
@@ -163,6 +204,10 @@
                 if (searchQuery) params.set('search', searchQuery);
                 if (statusFilter.value) params.set('status', statusFilter.value);
                 if (methodFilter.value) params.set('payment_method_type', methodFilter.value);
+                if (dateFrom.value) params.set('date_from', dateFrom.value);
+                if (dateTo.value) params.set('date_to', dateTo.value);
+                if (amountMin.value) params.set('amount_min', Math.round(parseFloat(amountMin.value) * 100));
+                if (amountMax.value) params.set('amount_max', Math.round(parseFloat(amountMax.value) * 100));
 
                 try {
                     const res = await fetch(`${API_BASE}/transactions?${params}`, {
@@ -252,12 +297,65 @@
             methodFilter.addEventListener('change', () => { currentPage = 1; fetchTransactions(); });
             perPage.addEventListener('change', () => { pageSize = +perPage.value; currentPage = 1; fetchTransactions(); });
 
+            // Date & Amount filters
+            dateFrom.addEventListener('change', () => { currentPage = 1; fetchTransactions(); });
+            dateTo.addEventListener('change', () => { currentPage = 1; fetchTransactions(); });
+            amountMin.addEventListener('change', () => { currentPage = 1; fetchTransactions(); });
+            amountMax.addEventListener('change', () => { currentPage = 1; fetchTransactions(); });
+
+            // Quick date buttons
+            document.querySelectorAll('.date-quick').forEach(btn => btn.addEventListener('click', () => {
+                const range = btn.dataset.range;
+                const today = new Date();
+                const fmt = d => d.toISOString().slice(0, 10);
+                dateTo.value = fmt(today);
+
+                if (range === 'today') {
+                    dateFrom.value = fmt(today);
+                } else {
+                    const days = parseInt(range);
+                    const from = new Date(today);
+                    from.setDate(from.getDate() - days);
+                    dateFrom.value = fmt(from);
+                }
+
+                // Highlight active button
+                document.querySelectorAll('.date-quick').forEach(b => b.classList.remove('kt-btn-primary'));
+                btn.classList.add('kt-btn-primary');
+                btn.classList.remove('kt-btn-outline');
+
+                currentPage = 1;
+                fetchTransactions();
+            }));
+
+            // Clear all filters
+            document.getElementById('clearFilters').addEventListener('click', () => {
+                statusFilter.value = '';
+                methodFilter.value = '';
+                searchInput.value = '';
+                dateFrom.value = '';
+                dateTo.value = '';
+                amountMin.value = '';
+                amountMax.value = '';
+                searchQuery = '';
+                document.querySelectorAll('.date-quick').forEach(b => {
+                    b.classList.remove('kt-btn-primary');
+                    b.classList.add('kt-btn-outline');
+                });
+                currentPage = 1;
+                fetchTransactions();
+            });
+
             // Export
             document.getElementById('exportCsvBtn').addEventListener('click', async () => {
                 const params = new URLSearchParams({page:1,size:10000});
                 if (statusFilter.value) params.set('status', statusFilter.value);
                 if (methodFilter.value) params.set('payment_method_type', methodFilter.value);
                 if (searchQuery) params.set('search', searchQuery);
+                if (dateFrom.value) params.set('date_from', dateFrom.value);
+                if (dateTo.value) params.set('date_to', dateTo.value);
+                if (amountMin.value) params.set('amount_min', Math.round(parseFloat(amountMin.value) * 100));
+                if (amountMax.value) params.set('amount_max', Math.round(parseFloat(amountMax.value) * 100));
                 try {
                     const res = await fetch(`${API_BASE}/transactions?${params}`, { headers: {'Accept':'application/json','X-Requested-With':'XMLHttpRequest'} });
                     const json = await res.json();

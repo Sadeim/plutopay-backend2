@@ -42,6 +42,22 @@ class TransactionController extends Controller
                 $query->where('payment_method_type', $method);
             }
 
+            // Date range filters
+            if ($dateFrom = $request->input('date_from')) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            }
+            if ($dateTo = $request->input('date_to')) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            }
+
+            // Amount range filters (values come in cents)
+            if ($amountMin = $request->input('amount_min')) {
+                $query->where('amount', '>=', (int)$amountMin);
+            }
+            if ($amountMax = $request->input('amount_max')) {
+                $query->where('amount', '<=', (int)$amountMax);
+            }
+
             // Sort
             $sortField = $request->input('sortField', 'created_at');
             $sortOrder = $request->input('sortOrder', 'desc');
