@@ -46,6 +46,8 @@ class StripeWebhookController extends Controller
             'payment_intent.canceled' => $this->handlePaymentCanceled($event->data->object),
             'charge.refunded' => $this->handleChargeRefunded($event->data->object),
             'charge.dispute.created' => $this->handleDisputeCreated($event->data->object),
+            'payout.created' => $this->handlePayoutCreatedOrUpdated($event->data->object),
+            'payout.updated' => $this->handlePayoutCreatedOrUpdated($event->data->object),
             'payout.paid' => $this->handlePayoutPaid($event->data->object),
             'payout.failed' => $this->handlePayoutFailed($event->data->object),
             default => Log::info("Stripe webhook: unhandled event type {$event->type}"),
@@ -101,6 +103,8 @@ class StripeWebhookController extends Controller
             'payment_intent.canceled' => $this->handlePaymentCanceled($event->data->object, $merchant),
             'charge.refunded' => $this->handleChargeRefunded($event->data->object, $merchant),
             'charge.dispute.created' => $this->handleDisputeCreated($event->data->object, $merchant),
+            'payout.created' => $this->handlePayoutCreatedOrUpdated($event->data->object, $merchant),
+            'payout.updated' => $this->handlePayoutCreatedOrUpdated($event->data->object, $merchant),
             'payout.paid' => $this->handlePayoutPaid($event->data->object, $merchant),
             'payout.failed' => $this->handlePayoutFailed($event->data->object, $merchant),
             default => null,
@@ -200,16 +204,74 @@ class StripeWebhookController extends Controller
         Log::info("Dispute created for charge: {$chargeId}", ['reason' => $dispute->reason ?? 'unknown']);
     }
 
+
+    protected function handlePayoutCreatedOrUpdated(object $payout, ?Merchant $merchant = null): void
+    {
+        if (!$merchant) return;
+
+        $existing = Payout::where('merchant_id', $merchant->id)
+            ->where('processor_payout_id', $payout->id)
+            ->first();
+
+        $status = match($payout->status) {
+            'paid' => 'paid',
+            'pending' => 'pending',
+            'in_transit' => 'in_transit',
+            'canceled' => 'canceled',
+            'failed' => 'failed',
+            default => 'pending',
+        };
+
+        $arrivalDate = isset($payout->arrival_date)
+            ? \Carbon\Carbon::createFromTimestamp($payout->arrival_date)
+            : null;
+
+        if ($existing) {
+            $existing->update([
+                'status' => $status,
+                'amount' => $payout->amount,
+                'estimated_arrival_at' => $arrivalDate,
+                'arrived_at' => $status === 'paid' ? $arrivalDate : $existing->arrived_at,
+            ]);
+            Log::info("Payout updated: {$payout->id} -> {$status}");
+        } else {
+            Payout::create([
+                'merchant_id' => $merchant->id,
+                'reference' => 'po_' . \Illuminate\Support\Str::random(20),
+                'amount' => $payout->amount,
+                'fee' => 0,
+                'net_amount' => $payout->amount,
+                'currency' => strtoupper($payout->currency),
+                'status' => $status,
+                'destination_type' => $payout->type ?? 'bank_account',
+                'destination_last_four' => is_string($payout->destination) ? substr($payout->destination, -4) : null,
+                'processor_payout_id' => $payout->id,
+                'is_test' => $merchant->test_mode,
+                'estimated_arrival_at' => $arrivalDate,
+                'arrived_at' => $status === 'paid' ? $arrivalDate : null,
+                'failed_at' => $status === 'failed' ? now() : null,
+                'failure_reason' => $payout->failure_message ?? null,
+            ]);
+            Log::info("Payout created from webhook: {$payout->id}");
+        }
+    }
+
     protected function handlePayoutPaid(object $payout, ?Merchant $merchant = null): void
     {
         if (!$merchant) return;
 
-        Payout::where('merchant_id', $merchant->id)
+        $existing = Payout::where('merchant_id', $merchant->id)
             ->where('processor_payout_id', $payout->id)
-            ->update([
+            ->first();
+
+        if ($existing) {
+            $existing->update([
                 'status' => 'paid',
                 'arrived_at' => now(),
             ]);
+        } else {
+            $this->handlePayoutCreatedOrUpdated($payout, $merchant);
+        }
 
         Log::info("Payout paid: {$payout->id}");
     }
@@ -218,13 +280,19 @@ class StripeWebhookController extends Controller
     {
         if (!$merchant) return;
 
-        Payout::where('merchant_id', $merchant->id)
+        $existing = Payout::where('merchant_id', $merchant->id)
             ->where('processor_payout_id', $payout->id)
-            ->update([
+            ->first();
+
+        if ($existing) {
+            $existing->update([
                 'status' => 'failed',
                 'failure_reason' => $payout->failure_message ?? 'Payout failed',
                 'failed_at' => now(),
             ]);
+        } else {
+            $this->handlePayoutCreatedOrUpdated($payout, $merchant);
+        }
 
         Log::info("Payout failed: {$payout->id}");
     }
