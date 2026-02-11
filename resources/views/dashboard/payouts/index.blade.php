@@ -49,7 +49,7 @@
                 <div class="kt-scrollable-x-auto">
                     <table class="kt-table table-auto kt-table-border">
                         <thead>
-                            <tr class="cursor-pointer hover:bg-muted/50" onclick="window.location='{{ route('dashboard.payouts.show', $payout->id) }}'">
+                            <tr>
                                 <th class="min-w-[180px]">Payout</th>
                                 <th class="min-w-[100px] text-end">Amount</th>
                                 <th class="min-w-[100px]">Status</th>
