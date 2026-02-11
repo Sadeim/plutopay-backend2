@@ -73,6 +73,7 @@ Route::middleware('auth')->prefix('dashboard')->name('dashboard.')->group(functi
 
     // Transactions
     Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/transactions/export', [TransactionController::class, 'exportExcel'])->name('transactions.export');
     Route::get('/transactions/{id}', [TransactionDetailController::class, 'show'])->name('transactions.show');
     Route::post('/transactions/{id}/refund', [TransactionDetailController::class, 'refund'])->name('transactions.refund');
 
