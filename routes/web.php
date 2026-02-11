@@ -89,6 +89,7 @@ Route::middleware('auth')->prefix('dashboard')->name('dashboard.')->group(functi
 
     // Payouts
     Route::get('/payouts', [PayoutController::class, 'index'])->name('payouts.index');
+    Route::get('/payouts/{id}', [PayoutController::class, 'show'])->name('payouts.show');
 
     // POS
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');

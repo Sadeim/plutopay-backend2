@@ -49,7 +49,7 @@
                 <div class="kt-scrollable-x-auto">
                     <table class="kt-table table-auto kt-table-border">
                         <thead>
-                            <tr>
+                            <tr class="cursor-pointer hover:bg-muted/50" onclick="window.location='{{ route('dashboard.payouts.show', $payout->id) }}'">
                                 <th class="min-w-[180px]">Payout</th>
                                 <th class="min-w-[100px] text-end">Amount</th>
                                 <th class="min-w-[100px]">Status</th>
@@ -60,7 +60,7 @@
                         </thead>
                         <tbody>
                             @foreach($payouts as $payout)
-                            <tr>
+                            <tr class="cursor-pointer hover:bg-muted/50" onclick="window.location='{{ route('dashboard.payouts.show', $payout->id) }}'">
                                 <td>
                                     <div class="flex flex-col gap-0.5">
                                         <span class="text-sm font-medium text-mono">{{ $symbol }}{{ number_format($payout->amount / 100, 2) }}</span>
