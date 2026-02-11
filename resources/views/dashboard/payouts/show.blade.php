@@ -93,17 +93,32 @@
                                     @foreach($transactions->where('type', '!=', 'payout') as $bt)
                                     <tr>
                                         <td>
-                                            <span class="text-sm text-foreground">{{ $bt['description'] ?? '-' }}</span>
+                                            <div class="flex flex-col gap-0.5">
+                                                <span class="text-sm font-medium text-foreground">
+                                                    @if($bt['description'])
+                                                        {{ $bt['description'] }}
+                                                    @elseif($bt['type'] === 'charge')
+                                                        Payment {{ $symbol }}{{ number_format($bt['amount'] / 100, 2) }}
+                                                    @elseif($bt['type'] === 'refund')
+                                                        Refund
+                                                    @else
+                                                        {{ ucfirst($bt['type']) }}
+                                                    @endif
+                                                </span>
+                                                <code class="text-2xs text-muted-foreground">{{ $bt['source'] ?? '' }}</code>
+                                            </div>
                                         </td>
                                         <td>
                                             @if($bt['type'] === 'charge')
-                                            <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Charge</span>
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Payment</span>
                                             @elseif($bt['type'] === 'refund')
-                                            <span class="kt-badge kt-badge-sm kt-badge-info kt-badge-outline">Refund</span>
+                                            <span class="kt-badge kt-badge-sm kt-badge-info">Refund</span>
                                             @elseif($bt['type'] === 'adjustment')
-                                            <span class="kt-badge kt-badge-sm kt-badge-warning kt-badge-outline">Adjustment</span>
+                                            <span class="kt-badge kt-badge-sm kt-badge-warning">Adjustment</span>
+                                            @elseif($bt['type'] === 'stripe_fee')
+                                            <span class="kt-badge kt-badge-sm kt-badge-secondary">Fee</span>
                                             @else
-                                            <span class="kt-badge kt-badge-sm kt-badge-secondary kt-badge-outline">{{ ucfirst($bt['type']) }}</span>
+                                            <span class="kt-badge kt-badge-sm kt-badge-secondary">{{ ucfirst($bt['type']) }}</span>
                                             @endif
                                         </td>
                                         <td class="text-end">
