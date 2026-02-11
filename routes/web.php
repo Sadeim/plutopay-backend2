@@ -9,6 +9,7 @@ use App\Http\Controllers\Dashboard\CustomerController;
 use App\Http\Controllers\Dashboard\ApiKeyController;
 use App\Http\Controllers\Dashboard\WebhookController;
 use App\Http\Controllers\Dashboard\SettingsController;
+use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\TerminalController;
 use App\Http\Controllers\Dashboard\PayoutController;
 use App\Http\Controllers\Dashboard\PosController;
@@ -91,6 +92,10 @@ Route::middleware('auth')->prefix('dashboard')->name('dashboard.')->group(functi
     // Payouts
     Route::get('/payouts', [PayoutController::class, 'index'])->name('payouts.index');
     Route::get('/payouts/{id}', [PayoutController::class, 'show'])->name('payouts.show');
+
+    // Reports
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/generate', [ReportController::class, 'generate'])->name('reports.generate');
 
     // POS
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
