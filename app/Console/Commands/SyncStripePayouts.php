@@ -91,7 +91,7 @@ class SyncStripePayouts extends Command
                                 if (!$dryRun) {
                                     $existing->update($changes);
                                 }
-                                $this->info("  UPD {$existing->reference}: -> {$changes['status'] ?? $existing->status}");
+                                $statusDisplay = $changes['status'] ?? $existing->status; $this->info("  UPD {$existing->reference}: -> {$statusDisplay}");
                                 $updated++;
                             }
                         } else {
