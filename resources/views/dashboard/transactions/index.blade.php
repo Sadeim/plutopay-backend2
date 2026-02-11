@@ -144,8 +144,7 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const API_BASE = '/api/v1';
-            const API_KEY  = '{{ $apiKey }}';
+            const API_BASE = '/dashboard';
 
             let currentPage = 1, pageSize = 10, sortField = 'created_at', sortOrder = 'desc', searchQuery = '', searchTimeout = null;
 
@@ -167,7 +166,7 @@
 
                 try {
                     const res = await fetch(`${API_BASE}/transactions?${params}`, {
-                        headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + API_KEY }
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const json = await res.json();
                     renderTable(json.data || [], json.totalCount || 0, json.page || 1, json.lastPage || 1);
@@ -260,7 +259,7 @@
                 if (methodFilter.value) params.set('payment_method_type', methodFilter.value);
                 if (searchQuery) params.set('search', searchQuery);
                 try {
-                    const res = await fetch(`${API_BASE}/transactions?${params}`, { headers: {'Accept':'application/json','Authorization':'Bearer '+API_KEY} });
+                    const res = await fetch(`${API_BASE}/transactions?${params}`, { headers: {'Accept':'application/json','X-Requested-With':'XMLHttpRequest'} });
                     const json = await res.json();
                     const rows = json.data || [];
                     if (!rows.length) { alert('No transactions to export'); return; }

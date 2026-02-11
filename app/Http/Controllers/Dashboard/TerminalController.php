@@ -45,8 +45,14 @@ class TerminalController extends Controller
                     : config('services.stripe.secret')
             );
 
+            $connectOpts = [];
+            if ($merchant->processor_account_id) {
+                $connectOpts['stripe_account'] = $merchant->processor_account_id;
+            }
+
             $readers = $stripe->terminal->readers->all(
-                ['location' => $request->location_id, 'limit' => 100]
+                ['location' => $request->location_id, 'limit' => 100],
+                $connectOpts
             );
 
             $existingIds = Terminal::where('merchant_id', $merchant->id)
@@ -68,7 +74,9 @@ class TerminalController extends Controller
             }
 
             $location = $stripe->terminal->locations->retrieve(
-                $request->location_id
+                $request->location_id,
+                null,
+                $connectOpts
             );
 
             return response()->json([
@@ -246,7 +254,11 @@ class TerminalController extends Controller
             foreach ($terminals as $terminal) {
                 if (!$terminal->processor_terminal_id) continue;
                 try {
-                    $reader = $stripe->terminal->readers->retrieve($terminal->processor_terminal_id);
+                    $syncOpts = [];
+                    if ($merchant->processor_account_id) {
+                        $syncOpts['stripe_account'] = $merchant->processor_account_id;
+                    }
+                    $reader = $stripe->terminal->readers->retrieve($terminal->processor_terminal_id, null, $syncOpts);
                     $terminal->update([
                         'status' => $reader->status === 'online' ? 'online' : 'offline',
                         'last_seen_at' => now(),

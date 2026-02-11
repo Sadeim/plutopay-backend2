@@ -46,6 +46,7 @@ class SettingsController extends Controller
             'country' => 'nullable|string|max:2',
             'default_currency' => 'nullable|string|max:3',
             'timezone' => 'nullable|string|max:50',
+            'processor_account_id' => 'nullable|string|max:255',
         ]);
 
         $merchant->update($request->only([
