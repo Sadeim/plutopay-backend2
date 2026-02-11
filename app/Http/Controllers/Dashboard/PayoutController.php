@@ -12,7 +12,7 @@ class PayoutController extends Controller
         $merchant = auth()->user()->merchant;
 
         $payouts = Payout::where('merchant_id', $merchant->id)
-            ->orderByDesc('created_at')
+            ->orderByDesc('estimated_arrival_at')
             ->paginate(20);
 
         $stats = [
