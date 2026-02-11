@@ -18,10 +18,10 @@ class SyncStripeTransactions extends Command
 
         $merchants = $merchantId
             ? Merchant::where('id', $merchantId)->get()
-            : Merchant::whereNotNull('processor_account_id')->get();
+            : Merchant::all();
 
         foreach ($merchants as $merchant) {
-            $this->info("Syncing merchant: {$merchant->business_name} ({$merchant->processor_account_id})");
+            $this->info("Syncing merchant: {$merchant->business_name}");
             $this->syncMerchant($merchant, $dryRun);
         }
 
@@ -36,11 +36,6 @@ class SyncStripeTransactions extends Command
                 : config('services.stripe.secret')
         );
 
-        $connectOpts = [];
-        if ($merchant->processor_account_id) {
-            $connectOpts['stripe_account'] = $merchant->processor_account_id;
-        }
-
         $transactions = Transaction::where('merchant_id', $merchant->id)
             ->whereNotNull('processor_transaction_id')
             ->get();
@@ -52,11 +47,14 @@ class SyncStripeTransactions extends Command
 
         foreach ($transactions as $txn) {
             try {
-                $pi = $stripe->paymentIntents->retrieve(
-                    $txn->processor_transaction_id,
-                    null,
-                    $connectOpts
-                );
+                // Try connected account first, then platform
+                $pi = $this->retrievePaymentIntent($stripe, $txn->processor_transaction_id, $merchant);
+
+                if (!$pi) {
+                    $this->error("  X {$txn->reference}: Not found on Stripe");
+                    $errors++;
+                    continue;
+                }
 
                 $changes = [];
 
@@ -76,34 +74,38 @@ class SyncStripeTransactions extends Command
                     }
                 }
 
+                // Get charge details
                 if (!empty($pi->latest_charge)) {
                     try {
-                        $charge = $stripe->charges->retrieve($pi->latest_charge, null, $connectOpts);
+                        // Use same account where PI was found
+                        $charge = $this->retrieveCharge($stripe, $pi->latest_charge, $merchant);
 
-                        if ($charge->receipt_url && !$txn->receipt_url) {
-                            $changes['receipt_url'] = $charge->receipt_url;
-                        }
-                        if ($charge->receipt_email && !$txn->receipt_email) {
-                            $changes['receipt_email'] = $charge->receipt_email;
-                        }
-                        if ($charge->amount_refunded > 0) {
-                            $changes['amount_refunded'] = $charge->amount_refunded;
-                            if ($charge->amount_refunded >= $txn->amount) {
-                                $changes['status'] = 'refunded';
-                                if (!$txn->refunded_at) $changes['refunded_at'] = now();
+                        if ($charge) {
+                            if ($charge->receipt_url && !$txn->receipt_url) {
+                                $changes['receipt_url'] = $charge->receipt_url;
                             }
-                        }
+                            if ($charge->receipt_email && !$txn->receipt_email) {
+                                $changes['receipt_email'] = $charge->receipt_email;
+                            }
+                            if ($charge->amount_refunded > 0) {
+                                $changes['amount_refunded'] = $charge->amount_refunded;
+                                if ($charge->amount_refunded >= $txn->amount) {
+                                    $changes['status'] = 'refunded';
+                                    if (!$txn->refunded_at) $changes['refunded_at'] = now();
+                                }
+                            }
 
-                        $pm = $charge->payment_method_details;
-                        if ($pm) {
-                            if ($pm->type === 'card' && $pm->card) {
-                                $changes['payment_method_type'] = 'card';
-                                $changes['card_brand'] = $pm->card->brand;
-                                $changes['card_last_four'] = $pm->card->last4;
-                            } elseif ($pm->type === 'card_present' && $pm->card_present) {
-                                $changes['payment_method_type'] = 'terminal';
-                                $changes['card_brand'] = $pm->card_present->brand;
-                                $changes['card_last_four'] = $pm->card_present->last4;
+                            $pm = $charge->payment_method_details;
+                            if ($pm) {
+                                if ($pm->type === 'card' && $pm->card) {
+                                    $changes['payment_method_type'] = 'card';
+                                    $changes['card_brand'] = $pm->card->brand;
+                                    $changes['card_last_four'] = $pm->card->last4;
+                                } elseif ($pm->type === 'card_present' && $pm->card_present) {
+                                    $changes['payment_method_type'] = 'terminal';
+                                    $changes['card_brand'] = $pm->card_present->brand;
+                                    $changes['card_last_four'] = $pm->card_present->last4;
+                                }
                             }
                         }
                     } catch (\Exception $e) {}
@@ -118,23 +120,16 @@ class SyncStripeTransactions extends Command
                     $newStatusDisplay = $changes['status'] ?? $oldStatus;
 
                     if ($dryRun) {
-                        $this->warn("  [DRY RUN] {$txn->reference}: {$oldStatus} -> {$newStatusDisplay} | " . json_encode($changes));
+                        $this->warn("  [DRY] {$txn->reference}: {$oldStatus} -> {$newStatusDisplay} | " . json_encode($changes));
                     } else {
                         $txn->update($changes);
-                        $this->info("  ✅ {$txn->reference}: {$oldStatus} -> {$newStatusDisplay}");
+                        $this->info("  OK {$txn->reference}: {$oldStatus} -> {$newStatusDisplay}");
                     }
                     $updated++;
                 } else {
-                    $this->line("  -- {$txn->reference}: already in sync ({$txn->status})");
+                    $this->line("  -- {$txn->reference}: in sync ({$txn->status})");
                 }
 
-            } catch (\Stripe\Exception\InvalidRequestException $e) {
-                $this->error("  X {$txn->reference}: {$e->getMessage()}");
-                if (str_contains($e->getMessage(), 'No such payment_intent') && !$dryRun) {
-                    $txn->update(['status' => 'canceled']);
-                    $this->warn("    -> Marked as canceled");
-                }
-                $errors++;
             } catch (\Exception $e) {
                 $this->error("  X {$txn->reference}: {$e->getMessage()}");
                 $errors++;
@@ -142,6 +137,42 @@ class SyncStripeTransactions extends Command
         }
 
         $this->info("  Summary: {$updated} updated, {$errors} errors");
+    }
+
+    protected function retrievePaymentIntent($stripe, string $piId, Merchant $merchant)
+    {
+        // Try connected account first
+        if ($merchant->processor_account_id) {
+            try {
+                return $stripe->paymentIntents->retrieve($piId, null, [
+                    'stripe_account' => $merchant->processor_account_id,
+                ]);
+            } catch (\Exception $e) {}
+        }
+
+        // Fallback to platform account
+        try {
+            return $stripe->paymentIntents->retrieve($piId);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    protected function retrieveCharge($stripe, string $chargeId, Merchant $merchant)
+    {
+        if ($merchant->processor_account_id) {
+            try {
+                return $stripe->charges->retrieve($chargeId, null, [
+                    'stripe_account' => $merchant->processor_account_id,
+                ]);
+            } catch (\Exception $e) {}
+        }
+
+        try {
+            return $stripe->charges->retrieve($chargeId);
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     protected function mapStatus($paymentIntent): string
