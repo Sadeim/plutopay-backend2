@@ -18,8 +18,10 @@ class PayoutController extends Controller
         $stats = [
             'total_count' => Payout::where('merchant_id', $merchant->id)->count(),
             'total_amount' => Payout::where('merchant_id', $merchant->id)->where('status', 'paid')->sum('amount'),
+            'total_fees' => Payout::where('merchant_id', $merchant->id)->sum('fee'),
             'pending' => Payout::where('merchant_id', $merchant->id)->where('status', 'pending')->count(),
             'in_transit' => Payout::where('merchant_id', $merchant->id)->where('status', 'in_transit')->count(),
+            'paid_count' => Payout::where('merchant_id', $merchant->id)->where('status', 'paid')->count(),
         ];
 
         return view('dashboard.payouts.index', [

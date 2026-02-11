@@ -30,8 +30,8 @@
                 <span class="text-secondary-foreground text-sm">Total Paid</span>
             </div>
             <div class="flex flex-col content-between gap-1.5 border border-dashed border-input shrink-0 rounded-md px-3.5 py-2 min-w-24 grow">
-                <span class="text-warning text-2xl leading-none font-semibold">{{ $stats['pending'] }}</span>
-                <span class="text-secondary-foreground text-sm">Pending</span>
+                <span class="text-mono text-2xl leading-none font-semibold">{{ $stats['paid_count'] }}</span>
+                <span class="text-secondary-foreground text-sm">Completed</span>
             </div>
             <div class="flex flex-col content-between gap-1.5 border border-dashed border-input shrink-0 rounded-md px-3.5 py-2 min-w-24 grow">
                 <span class="text-primary text-2xl leading-none font-semibold">{{ $stats['in_transit'] }}</span>
@@ -50,47 +50,86 @@
                     <table class="kt-table table-auto kt-table-border">
                         <thead>
                             <tr>
-                                <th class="min-w-[120px]">Reference</th>
-                                <th class="min-w-[100px]">Amount</th>
-                                <th class="min-w-[80px]">Fee</th>
-                                <th class="min-w-[100px]">Net</th>
+                                <th class="min-w-[180px]">Payout</th>
+                                <th class="min-w-[100px] text-end">Amount</th>
                                 <th class="min-w-[100px]">Status</th>
-                                <th class="min-w-[120px]">Destination</th>
-                                <th class="min-w-[140px]">Arrival</th>
-                                <th class="min-w-[140px]">Created</th>
+                                <th class="min-w-[140px]">Bank Account</th>
+                                <th class="min-w-[140px]">Expected Arrival</th>
+                                <th class="min-w-[140px]">Initiated</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($payouts as $payout)
                             <tr>
-                                <td><code class="text-xs font-mono">{{ $payout->reference }}</code></td>
-                                <td class="text-sm font-medium">{{ $symbol }}{{ number_format($payout->amount / 100, 2) }}</td>
-                                <td class="text-sm text-secondary-foreground">{{ $symbol }}{{ number_format(($payout->fee ?? 0) / 100, 2) }}</td>
-                                <td class="text-sm font-medium">{{ $symbol }}{{ number_format(($payout->net_amount ?? $payout->amount) / 100, 2) }}</td>
+                                <td>
+                                    <div class="flex flex-col gap-0.5">
+                                        <span class="text-sm font-medium text-mono">{{ $symbol }}{{ number_format($payout->amount / 100, 2) }}</span>
+                                        <code class="text-2xs text-muted-foreground">{{ $payout->processor_payout_id ?? $payout->reference }}</code>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-sm font-semibold text-mono">{{ $symbol }}{{ number_format($payout->amount / 100, 2) }}</span>
+                                </td>
                                 <td>
                                     @if($payout->status === 'paid')
-                                    <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Paid</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-success"></span>
+                                        <span class="text-sm text-success font-medium">Paid</span>
+                                    </div>
                                     @elseif($payout->status === 'in_transit')
-                                    <span class="kt-badge kt-badge-sm kt-badge-primary kt-badge-outline">In Transit</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                        <span class="text-sm text-primary font-medium">In Transit</span>
+                                    </div>
                                     @elseif($payout->status === 'pending')
-                                    <span class="kt-badge kt-badge-sm kt-badge-warning kt-badge-outline">Pending</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                        <span class="text-sm text-warning font-medium">Pending</span>
+                                    </div>
                                     @elseif($payout->status === 'failed')
-                                    <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Failed</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-destructive"></span>
+                                        <span class="text-sm text-destructive font-medium">Failed</span>
+                                    </div>
+                                    @if($payout->failure_reason)
+                                    <span class="text-2xs text-destructive">{{ $payout->failure_reason }}</span>
+                                    @endif
                                     @else
-                                    <span class="kt-badge kt-badge-sm kt-badge-secondary kt-badge-outline">{{ ucfirst($payout->status) }}</span>
+                                    <span class="text-sm text-secondary-foreground">{{ ucfirst($payout->status) }}</span>
                                     @endif
                                 </td>
-                                <td class="text-sm text-secondary-foreground">
-                                    @if($payout->destination_last_four)
-                                    •••• {{ $payout->destination_last_four }}
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <i class="ki-filled ki-bank text-base text-muted-foreground"></i>
+                                        <div class="flex flex-col">
+                                            <span class="text-sm text-foreground">{{ ucfirst($payout->destination_type ?? 'Bank') }}</span>
+                                            @if($payout->destination_last_four)
+                                            <span class="text-2xs text-muted-foreground">•••• {{ $payout->destination_last_four }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if($payout->status === 'paid' && $payout->arrived_at)
+                                    <div class="flex flex-col gap-0.5">
+                                        <span class="text-sm text-foreground">{{ $payout->arrived_at->format('M d, Y') }}</span>
+                                        <span class="text-2xs text-success">Arrived</span>
+                                    </div>
+                                    @elseif($payout->estimated_arrival_at)
+                                    <div class="flex flex-col gap-0.5">
+                                        <span class="text-sm text-foreground">{{ $payout->estimated_arrival_at->format('M d, Y') }}</span>
+                                        <span class="text-2xs text-muted-foreground">Estimated</span>
+                                    </div>
                                     @else
-                                    -
+                                    <span class="text-sm text-muted-foreground">-</span>
                                     @endif
                                 </td>
-                                <td class="text-sm text-secondary-foreground">
-                                    {{ $payout->estimated_arrival_at ? $payout->estimated_arrival_at->format('M d, Y') : '-' }}
+                                <td>
+                                    <div class="flex flex-col gap-0.5">
+                                        <span class="text-sm text-foreground">{{ $payout->created_at->format('M d, Y') }}</span>
+                                        <span class="text-2xs text-muted-foreground">{{ $payout->created_at->format('h:i A') }}</span>
+                                    </div>
                                 </td>
-                                <td class="text-sm text-secondary-foreground">{{ $payout->created_at->format('M d, Y') }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -113,7 +152,7 @@
             </div>
         </div>
 
-        {{-- Documentation --}}
+        {{-- Payout Info --}}
         <div class="kt-card">
             <div class="kt-card-content p-5">
                 <div class="flex items-start gap-3">
@@ -122,7 +161,7 @@
                         <span class="text-sm font-medium text-foreground">Payout Schedule</span>
                         <p class="text-xs text-secondary-foreground leading-relaxed">
                             Payouts are processed automatically on a rolling basis. Funds from completed payments are typically available for payout within 2 business days.
-                            The payout schedule and minimum amounts can be configured by contacting support.
+                            Payouts are synced automatically via webhooks — new payouts will appear here in real-time.
                         </p>
                     </div>
                 </div>
