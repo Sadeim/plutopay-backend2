@@ -14,7 +14,7 @@
                     {{-- Header with Logo --}}
                     <tr>
                         <td style="background-color: #ffffff; padding: 28px 40px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-                            <img src="https://plutopayus.com/images/plutopay.svg" alt="PlutoPay" style="height: 40px; width: auto;" />
+                            <img src="https://plutopayus.com/images/plutopay.png" alt="PlutoPay" style="height: 40px; width: auto;" />
                             <p style="color: #64748b; margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Daily Summary Report</p>
                         </td>
                     </tr>
@@ -171,7 +171,7 @@
                     {{-- Footer --}}
                     <tr>
                         <td style="padding: 24px 40px; border-top: 1px solid #e2e8f0; text-align: center;">
-                            <img src="https://plutopayus.com/images/plutopay.svg" alt="PlutoPay" style="height: 22px; width: auto; opacity: 0.4; margin-bottom: 8px;" />
+                            <img src="https://plutopayus.com/images/plutopay.png" alt="PlutoPay" style="height: 22px; width: auto; opacity: 0.4; margin-bottom: 8px;" />
                             <p style="color: #94a3b8; font-size: 11px; margin: 0 0 4px;">&copy; {{ date('Y') }} PlutoPay. All rights reserved.</p>
                             <p style="color: #cbd5e1; font-size: 11px; margin: 0;">You can manage notifications in your <a href="https://plutopayus.com/dashboard/settings" style="color: #3b82f6; text-decoration: none;">settings</a>.</p>
                         </td>
