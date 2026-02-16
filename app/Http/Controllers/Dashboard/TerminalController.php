@@ -249,22 +249,46 @@ class TerminalController extends Controller
                     : config('services.stripe.secret')
             );
 
+            // Get connected account readers
+            $connectedReaders = collect();
+            if ($merchant->processor_account_id) {
+                try {
+                    $result = $stripe->terminal->readers->all(
+                        ['limit' => 100],
+                        ['stripe_account' => $merchant->processor_account_id]
+                    );
+                    $connectedReaders = collect($result->data);
+                } catch (\Exception $e) {}
+            }
+
+            // Get platform readers as fallback
+            $platformReaders = collect();
+            try {
+                $result = $stripe->terminal->readers->all(['limit' => 100]);
+                $platformReaders = collect($result->data);
+            } catch (\Exception $e) {}
+
             $terminals = Terminal::where('merchant_id', $merchant->id)->get();
 
             foreach ($terminals as $terminal) {
-                if (!$terminal->processor_terminal_id) continue;
-                try {
-                    $syncOpts = [];
-                    if ($merchant->processor_account_id) {
-                        $syncOpts['stripe_account'] = $merchant->processor_account_id;
-                    }
-                    $reader = $stripe->terminal->readers->retrieve($terminal->processor_terminal_id, null, $syncOpts);
+                if (!$terminal->processor_terminal_id && !$terminal->serial_number) continue;
+
+                // Check connected first, then platform
+                $reader = $connectedReaders->first(fn($r) =>
+                    $r->id === $terminal->processor_terminal_id || $r->serial_number === $terminal->serial_number
+                );
+
+                if (!$reader) {
+                    $reader = $platformReaders->first(fn($r) =>
+                        $r->id === $terminal->processor_terminal_id || $r->serial_number === $terminal->serial_number
+                    );
+                }
+
+                if ($reader) {
                     $terminal->update([
-                        'status' => $reader->status === 'online' ? 'online' : 'offline',
-                        'last_seen_at' => now(),
+                        'status' => $reader->status,
+                        'last_seen_at' => $reader->status === 'online' ? now() : $terminal->last_seen_at,
                     ]);
-                } catch (\Exception $e) {
-                    $terminal->update(['status' => 'offline']);
                 }
             }
         } catch (\Exception $e) {}
