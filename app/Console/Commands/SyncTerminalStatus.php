@@ -14,75 +14,78 @@ class SyncTerminalStatus extends Command
 
     public function handle(): int
     {
-        $merchants = Merchant::whereNotNull('processor_account_id')->get();
+        $stripe = new StripeClient(config('services.stripe.secret'));
         $updated = 0;
         $total = 0;
+
+        // Get ALL platform readers once
+        $platformReaders = collect();
+        try {
+            $result = $stripe->terminal->readers->all(['limit' => 100]);
+            $platformReaders = collect($result->data);
+            $this->line("Platform readers: {$platformReaders->count()}");
+        } catch (\Exception $e) {
+            $this->warn("Failed to fetch platform readers: {$e->getMessage()}");
+        }
+
+        $merchants = Merchant::whereNotNull('processor_account_id')->get();
 
         foreach ($merchants as $merchant) {
             $terminals = Terminal::where('merchant_id', $merchant->id)->get();
             if ($terminals->isEmpty()) continue;
 
+            // Get connected account readers
+            $connectedReaders = collect();
             try {
-                $stripe = new StripeClient(config('services.stripe.secret'));
+                $result = $stripe->terminal->readers->all(
+                    ['limit' => 100],
+                    ['stripe_account' => $merchant->processor_account_id]
+                );
+                $connectedReaders = collect($result->data);
+            } catch (\Exception $e) {
+                // No readers on connected account, that's ok
+            }
 
-                // Try connected account first
-                $readers = collect();
-                try {
-                    $result = $stripe->terminal->readers->all(
-                        ['limit' => 100],
-                        ['stripe_account' => $merchant->processor_account_id]
-                    );
-                    $readers = collect($result->data);
-                } catch (\Exception $e) {
-                    // Connected account has no readers, try platform
-                }
+            foreach ($terminals as $terminal) {
+                $total++;
 
-                // If no readers on connected account, check platform
-                if ($readers->isEmpty()) {
-                    try {
-                        $result = $stripe->terminal->readers->all(['limit' => 100]);
-                        $readers = collect($result->data);
-                    } catch (\Exception $e) {
-                        $this->warn("Failed to fetch platform readers: {$e->getMessage()}");
-                        continue;
-                    }
-                }
+                // First check connected account, then platform
+                $reader = $connectedReaders->first(function ($r) use ($terminal) {
+                    return $r->id === $terminal->processor_terminal_id
+                        || $r->serial_number === $terminal->serial_number;
+                });
 
-                foreach ($terminals as $terminal) {
-                    $total++;
-
-                    // Match by processor_terminal_id or serial_number
-                    $reader = $readers->first(function ($r) use ($terminal) {
+                if (!$reader) {
+                    $reader = $platformReaders->first(function ($r) use ($terminal) {
                         return $r->id === $terminal->processor_terminal_id
                             || $r->serial_number === $terminal->serial_number;
                     });
-
-                    if ($reader) {
-                        $changed = $terminal->status !== $reader->status;
-                        $terminal->update([
-                            'status' => $reader->status,
-                            'last_seen_at' => $reader->status === 'online' ? now() : $terminal->last_seen_at,
-                        ]);
-                        if ($changed) {
-                            $updated++;
-                            $this->info("{$terminal->name}: {$terminal->getOriginal('status')} → {$reader->status}");
-                        }
-                    } else {
-                        // Reader not found in Stripe - mark as offline
-                        if ($terminal->status !== 'offline') {
-                            $terminal->update(['status' => 'offline']);
-                            $updated++;
-                            $this->info("{$terminal->name}: → offline (not found in Stripe)");
-                        }
-                    }
                 }
 
-            } catch (\Exception $e) {
-                $this->error("Merchant {$merchant->business_name}: {$e->getMessage()}");
+                if ($reader) {
+                    $oldStatus = $terminal->status;
+                    $newStatus = $reader->status;
+
+                    $terminal->update([
+                        'status' => $newStatus,
+                        'last_seen_at' => $newStatus === 'online' ? now() : $terminal->last_seen_at,
+                    ]);
+
+                    if ($oldStatus !== $newStatus) {
+                        $updated++;
+                        $this->info("{$terminal->name}: {$oldStatus} → {$newStatus}");
+                    }
+                } else {
+                    if ($terminal->status !== 'offline') {
+                        $terminal->update(['status' => 'offline']);
+                        $updated++;
+                        $this->info("{$terminal->name}: → offline (not found)");
+                    }
+                }
             }
         }
 
-        $this->info("Synced {$total} terminals, {$updated} updated.");
+        $this->info("Synced {$total} terminals, {$updated} changed.");
         return self::SUCCESS;
     }
 }
