@@ -31,18 +31,18 @@
         </div>
 
         {{-- Main Stats --}}
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
-            {{-- Total Volume --}}
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-5">
+            {{-- Net Sales --}}
             <div class="kt-card">
                 <div class="kt-card-content p-4 lg:p-5">
                     <div class="flex flex-col gap-2">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs text-secondary-foreground font-medium">Total Volume</span>
+                            <span class="text-xs text-secondary-foreground font-medium">Net Sales</span>
                             <div class="flex items-center justify-center size-8 rounded-md bg-success/10">
                                 <i class="ki-filled ki-dollar text-success"></i>
                             </div>
                         </div>
-                        <span class="text-xl lg:text-2xl font-semibold text-mono">{{ $sym }}{{ number_format($stats['total_volume'] / 100, 2) }}</span>
+                        <span class="text-xl lg:text-2xl font-semibold text-mono">{{ $sym }}{{ number_format(($stats['total_volume'] - $stats['total_tips']) / 100, 2) }}</span>
                         <div class="flex items-center gap-1">
                             @if($volChange >= 0)
                             <span class="text-xs text-success font-medium"><i class="ki-filled ki-arrow-up text-2xs"></i> {{ $volChange }}%</span>
@@ -50,6 +50,24 @@
                             <span class="text-xs text-destructive font-medium"><i class="ki-filled ki-arrow-down text-2xs"></i> {{ abs($volChange) }}%</span>
                             @endif
                             <span class="text-xs text-secondary-foreground">vs last 30d</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tips --}}
+            <div class="kt-card">
+                <div class="kt-card-content p-4 lg:p-5">
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-secondary-foreground font-medium">Tips</span>
+                            <div class="flex items-center justify-center size-8 rounded-md bg-success/10">
+                                <i class="ki-filled ki-heart text-success"></i>
+                            </div>
+                        </div>
+                        <span class="text-xl lg:text-2xl font-semibold text-success">{{ $sym }}{{ number_format($stats['total_tips'] / 100, 2) }}</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs text-secondary-foreground">Total: {{ $sym }}{{ number_format($stats['total_volume'] / 100, 2) }}</span>
                         </div>
                     </div>
                 </div>
@@ -109,15 +127,6 @@
                         </div>
                         <span class="text-xl lg:text-2xl font-semibold text-mono">{{ number_format($stats['success_rate'], 1) }}%</span>
                         <div class="flex items-center gap-1.5">
-                            <span class="text-xs text-secondary-foreground">{{ $stats['active_terminals'] }} terminal{{ $stats['active_terminals'] !== 1 ? 's' : '' }} online</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex flex-col bg-card border border-border rounded-xl shadow-none">
-                    <div class="flex flex-col gap-1 p-5">
-                        <span class="text-xs font-medium text-secondary-foreground uppercase">Total Tips</span>
-                        <span class="text-xl lg:text-2xl font-semibold text-success">{{ $sym }}{{ number_format($stats['total_tips'] / 100, 2) }}</span>
-                        <div class="flex items-center gap-1">
                             <span class="text-xs text-secondary-foreground">{{ $stats['active_terminals'] }} terminal{{ $stats['active_terminals'] !== 1 ? 's' : '' }} online</span>
                         </div>
                     </div>
