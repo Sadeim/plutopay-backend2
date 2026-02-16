@@ -219,6 +219,7 @@
                 tbody.innerHTML = rows.map(r => `<tr>
             <td class="text-sm text-foreground font-normal"><a href="/dashboard/transactions/${r.id}" class="font-medium text-mono hover:text-primary">${r.reference || '-'}</a></td>
             <td class="text-sm text-foreground font-normal lg:text-end"><span class="font-semibold text-mono">${r.amount_formatted || fmtAmt(r.amount, r.currency)}</span></td>
+            <td class="text-sm font-normal lg:text-end">${r.tip_amount > 0 ? `<span class="text-success font-medium">${fmtAmt(r.tip_amount, r.currency)}</span>` : `-`}</td>
             <td class="lg:text-end">${badge(r.status, r.status_badge)}</td>
             <td class="text-sm text-secondary-foreground font-normal lg:text-end">${method(r.payment_method_type)}</td>
             <td class="text-sm text-secondary-foreground font-normal lg:text-end">${r.receipt_email || '-'}</td>
