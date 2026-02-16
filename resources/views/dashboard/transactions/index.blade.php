@@ -112,6 +112,9 @@
                         <th class="min-w-24 text-end cursor-pointer" data-sort="amount">
                             <span class="kt-table-col"><span class="kt-table-col-label">Amount</span><span class="kt-table-col-sort" id="sort-amount"></span></span>
                         </th>
+                        <th>
+                            <span class="kt-table-col"><span class="kt-table-col-label">Tip</span></span>
+                        </th>
                         <th class="min-w-24 text-end cursor-pointer" data-sort="status">
                             <span class="kt-table-col"><span class="kt-table-col-label">Status</span><span class="kt-table-col-sort" id="sort-status"></span></span>
                         </th>
@@ -127,7 +130,7 @@
                     </tr>
                     </thead>
                     <tbody id="txnBody">
-                    <tr><td colspan="6" class="text-center py-10 text-secondary-foreground">Loading...</td></tr>
+                    <tr><td colspan="7" class="text-center py-10 text-secondary-foreground">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -193,7 +196,7 @@
             }
 
             async function fetchTransactions() {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-secondary-foreground">Loading...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-secondary-foreground">Loading...</td></tr>';
                 try {
                     const res = await fetch(`${API_BASE}/transactions?${buildParams(false)}`, {
                         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
@@ -201,13 +204,13 @@
                     const json = await res.json();
                     renderTable(json.data || [], json.totalCount || 0, json.page || 1, json.lastPage || 1);
                 } catch (err) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-destructive">Failed to load transactions</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-destructive">Failed to load transactions</td></tr>';
                 }
             }
 
             function renderTable(rows, total, page, lastPage) {
                 if (!rows.length) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-secondary-foreground"><div class="flex flex-col items-center gap-3"><i class="ki-filled ki-dollar text-3xl text-muted-foreground"></i><span>No transactions found</span></div></td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-secondary-foreground"><div class="flex flex-col items-center gap-3"><i class="ki-filled ki-dollar text-3xl text-muted-foreground"></i><span>No transactions found</span></div></td></tr>';
                     pageInfo.textContent = '';
                     paginationEl.innerHTML = '';
                     return;
