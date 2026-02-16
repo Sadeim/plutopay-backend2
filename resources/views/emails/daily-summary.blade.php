@@ -14,7 +14,7 @@
                     {{-- Header with Logo --}}
                     <tr>
                         <td style="background-color: #ffffff; padding: 28px 40px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-                            <img src="https://plutopayus.com/images/plutopay.png" alt="PlutoPay" style="height: 40px; width: auto;" />
+                            <img src="https://plutopayus.com/images/plutopay.png" alt="PlutoPay" style="height: 60px; width: auto;" />
                             <p style="color: #64748b; margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Daily Summary Report</p>
                         </td>
                     </tr>
