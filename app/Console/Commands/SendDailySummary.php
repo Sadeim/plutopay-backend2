@@ -78,19 +78,19 @@ class SendDailySummary extends Command
                 'symbol' => $symbol,
             ];
 
-            // Send to all owner/admin users of this merchant
-            $users = MerchantUser::where('merchant_id', $merchant->id)
-                ->whereIn('role', ['owner', 'admin'])
-                ->get();
+            // Send to merchant business email
+            $email = $merchant->business_email;
+            if (!$email) {
+                $this->warn("{$merchant->business_name}: No business email, skipping.");
+                continue;
+            }
 
-            foreach ($users as $user) {
-                try {
-                    Mail::to($user->email)->send(new DailySummaryMail($merchant, $summary, $dateFormatted));
-                    $sent++;
-                    $this->info("Sent to {$user->email} ({$merchant->business_name})");
-                } catch (\Exception $e) {
-                    $this->error("Failed to send to {$user->email}: {$e->getMessage()}");
-                }
+            try {
+                Mail::to($email)->send(new DailySummaryMail($merchant, $summary, $dateFormatted));
+                $sent++;
+                $this->info("Sent to {$email} ({$merchant->business_name})");
+            } catch (\Exception $e) {
+                $this->error("Failed to send to {$email}: {$e->getMessage()}");
             }
         }
 
