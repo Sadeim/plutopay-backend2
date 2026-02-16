@@ -108,6 +108,15 @@
                             </div>
                         </div>
                         <span class="text-xl lg:text-2xl font-semibold text-mono">{{ number_format($stats['success_rate'], 1) }}%</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-secondary-foreground">{{ $stats['active_terminals'] }} terminal{{ $stats['active_terminals'] !== 1 ? 's' : '' }} online</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col bg-card border border-border rounded-xl shadow-none">
+                    <div class="flex flex-col gap-1 p-5">
+                        <span class="text-xs font-medium text-secondary-foreground uppercase">Total Tips</span>
+                        <span class="text-xl lg:text-2xl font-semibold text-success">{{ $sym }}{{ number_format($stats['total_tips'] / 100, 2) }}</span>
                         <div class="flex items-center gap-1">
                             <span class="text-xs text-secondary-foreground">{{ $stats['active_terminals'] }} terminal{{ $stats['active_terminals'] !== 1 ? 's' : '' }} online</span>
                         </div>

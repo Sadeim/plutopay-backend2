@@ -21,6 +21,9 @@ class DashboardController extends Controller
         $totalVolume = Transaction::where('merchant_id', $mid)
             ->where('status', 'succeeded')->sum('amount');
 
+        $totalTips = Transaction::where('merchant_id', $mid)
+            ->where('status', 'succeeded')->sum('tip_amount');
+
         $totalTransactions = Transaction::where('merchant_id', $mid)->count();
 
         $successfulTransactions = Transaction::where('merchant_id', $mid)
@@ -111,6 +114,7 @@ class DashboardController extends Controller
         return view('dashboard.index', [
             'stats' => [
                 'total_volume' => $totalVolume,
+            'total_tips' => $totalTips,
                 'total_transactions' => $totalTransactions,
                 'success_rate' => $successRate,
                 'active_terminals' => $activeTerminals,

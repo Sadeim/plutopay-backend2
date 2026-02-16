@@ -84,6 +84,12 @@
                                 <span class="text-xs text-secondary-foreground">Amount</span>
                                 <span class="text-sm font-medium text-foreground">{{ $amount }}</span>
                             </div>
+                            @if($txn->tip_amount > 0)
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs text-secondary-foreground">Tip</span>
+                                <span class="text-sm font-medium text-success">{{ $symbol }}{{ number_format($txn->tip_amount / 100, 2) }}</span>
+                            </div>
+                            @endif
                             @if($txn->amount_refunded > 0)
                             <div class="flex flex-col gap-0.5">
                                 <span class="text-xs text-secondary-foreground">Refunded</span>

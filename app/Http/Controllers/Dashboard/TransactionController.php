@@ -109,6 +109,7 @@ class TransactionController extends Controller
                     'payment_method_type' => $t->payment_method_type,
                     'receipt_email' => $t->receipt_email,
                     'description' => $t->description,
+                    'tip_amount' => $t->tip_amount ?? 0,
                     'created_at' => $t->created_at?->toIso8601String(),
                 ];
             });
