@@ -143,6 +143,12 @@ class StripeWebhookController extends Controller
             }
         }
 
+        // Tip amount
+        $tipAmount = $intent->amount_details->tip->amount ?? 0;
+        if ($tipAmount > 0) {
+            $updateData['tip_amount'] = $tipAmount;
+        }
+
         // Receipt URL
         if (!empty($intent->charges->data[0]->receipt_url)) {
             $updateData['receipt_url'] = $intent->charges->data[0]->receipt_url;

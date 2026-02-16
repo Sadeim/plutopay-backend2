@@ -115,6 +115,12 @@ class SyncStripeTransactions extends Command
                     $changes['amount'] = $pi->amount;
                 }
 
+                // Sync tip amount
+                $tipAmount = $pi->amount_details->tip->amount ?? 0;
+                if ($tipAmount > 0 && $txn->tip_amount != $tipAmount) {
+                    $changes['tip_amount'] = $tipAmount;
+                }
+
                 if (!empty($changes)) {
                     $oldStatus = $txn->status;
                     $newStatusDisplay = $changes['status'] ?? $oldStatus;

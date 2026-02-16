@@ -13,7 +13,8 @@ class Transaction extends Model
 
     protected $fillable = [
         'merchant_id', 'customer_id', 'reference', 'type', 'status',
-        'amount', 'amount_refunded', 'currency', 'payment_method_type',
+        'amount', 'amount_refunded',
+        'tip_amount', 'currency', 'payment_method_type',
         'card_brand', 'card_last_four', 'card_exp_month', 'card_exp_year',
         'source', 'terminal_id', 'processor_type', 'processor_transaction_id',
         'processor_response', 'idempotency_key', 'description', 'failure_reason',
