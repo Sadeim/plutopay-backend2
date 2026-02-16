@@ -43,7 +43,7 @@ class SyncTerminalStatus extends Command
                 );
                 $connectedReaders = collect($result->data);
             } catch (\Exception $e) {
-                // No readers on connected account, that's ok
+                // No readers on connected account
             }
 
             foreach ($terminals as $terminal) {
@@ -73,13 +73,13 @@ class SyncTerminalStatus extends Command
 
                     if ($oldStatus !== $newStatus) {
                         $updated++;
-                        $this->info("{$terminal->name}: {$oldStatus} → {$newStatus}");
+                        $this->info("{$terminal->name}: {$oldStatus} -> {$newStatus}");
                     }
                 } else {
                     if ($terminal->status !== 'offline') {
                         $terminal->update(['status' => 'offline']);
                         $updated++;
-                        $this->info("{$terminal->name}: → offline (not found)");
+                        $this->info("{$terminal->name}: -> offline (not found)");
                     }
                 }
             }
