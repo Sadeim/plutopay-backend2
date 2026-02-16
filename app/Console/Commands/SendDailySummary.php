@@ -79,9 +79,9 @@ class SendDailySummary extends Command
             ];
 
             // Send to merchant business email
-            $email = $merchant->business_email;
+            $email = $merchant->email;
             if (!$email) {
-                $this->warn("{$merchant->business_name}: No business email, skipping.");
+                $this->warn("{$merchant->business_name}: No email, skipping.");
                 continue;
             }
 
