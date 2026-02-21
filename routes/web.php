@@ -26,6 +26,10 @@ Route::get('/', function () {
     return view('landing');
 });
 
+Route::get('/docs', function () {
+    return response()->file(public_path('docs.html'));
+});
+
 // Auth
 Route::middleware('guest')->group(function () {
     Route::get('/login', [WebAuthController::class, 'showLogin'])->name('login');

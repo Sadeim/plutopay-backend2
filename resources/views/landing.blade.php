@@ -394,7 +394,7 @@
     <p>Accept payments, send payouts, and manage your business finances. From small shops to enterprise platforms.</p>
     <div class="hero-actions">
         <a href="/register" class="btn-hero">Start now →</a>
-        <a href="/contact" class="btn-hero-alt">Contact sales</a>
+        <a href="mailto:info@plutopayus.com" class="btn-hero-alt">Contact sales</a>
     </div>
     <div class="hero-sub-links">
         <a href="/docs">Documentation <span class="arrow">→</span></a>
