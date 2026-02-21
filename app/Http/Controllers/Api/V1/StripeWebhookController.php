@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 class StripeWebhookController extends Controller
 {
     /**
-     * Handle incoming Stripe webhook events.
+     * Handle incoming Stripe webhook events (Platform/Direct).
      *
      * POST /api/v1/stripe/webhook
      */
@@ -41,16 +41,19 @@ class StripeWebhookController extends Controller
 
         Log::info('Stripe webhook received', ['type' => $event->type, 'id' => $event->id]);
 
+        // Resolve merchant from event data (on_behalf_of, transfer_data, etc.)
+        $merchant = $this->resolveMerchantFromEvent($event->data->object);
+
         match ($event->type) {
-            'payment_intent.succeeded' => $this->handlePaymentSucceeded($event->data->object),
-            'payment_intent.payment_failed' => $this->handlePaymentFailed($event->data->object),
-            'payment_intent.canceled' => $this->handlePaymentCanceled($event->data->object),
-            'charge.refunded' => $this->handleChargeRefunded($event->data->object),
-            'charge.dispute.created' => $this->handleDisputeCreated($event->data->object),
-            'payout.created' => $this->handlePayoutCreatedOrUpdated($event->data->object),
-            'payout.updated' => $this->handlePayoutCreatedOrUpdated($event->data->object),
-            'payout.paid' => $this->handlePayoutPaid($event->data->object),
-            'payout.failed' => $this->handlePayoutFailed($event->data->object),
+            'payment_intent.succeeded' => $this->handlePaymentSucceeded($event->data->object, $merchant),
+            'payment_intent.payment_failed' => $this->handlePaymentFailed($event->data->object, $merchant),
+            'payment_intent.canceled' => $this->handlePaymentCanceled($event->data->object, $merchant),
+            'charge.refunded' => $this->handleChargeRefunded($event->data->object, $merchant),
+            'charge.dispute.created' => $this->handleDisputeCreated($event->data->object, $merchant),
+            'payout.created' => $this->handlePayoutCreatedOrUpdated($event->data->object, $merchant),
+            'payout.updated' => $this->handlePayoutCreatedOrUpdated($event->data->object, $merchant),
+            'payout.paid' => $this->handlePayoutPaid($event->data->object, $merchant),
+            'payout.failed' => $this->handlePayoutFailed($event->data->object, $merchant),
             default => Log::info("Stripe webhook: unhandled event type {$event->type}"),
         };
 
@@ -90,7 +93,6 @@ class StripeWebhookController extends Controller
             return response()->json(['received' => true], 200);
         }
 
-        // Find merchant by processor_account_id
         $merchant = Merchant::where('processor_account_id', $connectedAccountId)->first();
 
         if (!$merchant) {
@@ -133,8 +135,8 @@ class StripeWebhookController extends Controller
             'captured_at' => now(),
         ];
 
-        // Extract card info if available
-        $charge = $intent->charges->data[0] ?? $intent->latest_charge ?? null;
+        // Extract card info
+        $charge = $this->extractCharge($intent);
         if ($charge && !empty($charge->payment_method_details)) {
             $pm = $charge->payment_method_details;
             if (($pm->type ?? null) === 'card' && !empty($pm->card)) {
@@ -164,7 +166,6 @@ class StripeWebhookController extends Controller
         }
 
         $txn->update($updateData);
-
         Log::info("Payment succeeded: {$txn->reference}");
     }
 
@@ -172,7 +173,6 @@ class StripeWebhookController extends Controller
     {
         $txn = $this->findTransaction($intent->id, $merchant);
 
-        // Auto-create if not found
         if (!$txn && $merchant) {
             $txn = $this->createTransactionFromIntent($intent, $merchant, 'failed');
             Log::info("Auto-created failed transaction from webhook: {$txn->reference}");
@@ -197,7 +197,6 @@ class StripeWebhookController extends Controller
     {
         $txn = $this->findTransaction($intent->id, $merchant);
 
-        // Auto-create if not found
         if (!$txn && $merchant) {
             $txn = $this->createTransactionFromIntent($intent, $merchant, 'canceled');
             Log::info("Auto-created canceled transaction from webhook: {$txn->reference}");
@@ -293,10 +292,7 @@ class StripeWebhookController extends Controller
             ->first();
 
         if ($existing) {
-            $existing->update([
-                'status' => 'paid',
-                'arrived_at' => now(),
-            ]);
+            $existing->update(['status' => 'paid', 'arrived_at' => now()]);
         } else {
             $this->handlePayoutCreatedOrUpdated($payout, $merchant);
         }
@@ -339,17 +335,63 @@ class StripeWebhookController extends Controller
     }
 
     /**
+     * Extract charge from PaymentIntent (handles different webhook formats).
+     */
+    protected function extractCharge(object $intent): ?object
+    {
+        // Expanded charges
+        if (!empty($intent->charges->data[0])) {
+            return $intent->charges->data[0];
+        }
+
+        // latest_charge as object (expanded)
+        if (!empty($intent->latest_charge) && is_object($intent->latest_charge)) {
+            return $intent->latest_charge;
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve merchant from a platform webhook event.
+     * Checks on_behalf_of and transfer_data.destination.
+     */
+    protected function resolveMerchantFromEvent(object $eventData): ?Merchant
+    {
+        // PaymentIntent: on_behalf_of
+        $accountId = $eventData->on_behalf_of ?? null;
+
+        // PaymentIntent: transfer_data.destination
+        if (!$accountId) {
+            $accountId = $eventData->transfer_data->destination ?? null;
+        }
+
+        // Charge: look at on_behalf_of directly
+        if (!$accountId && isset($eventData->on_behalf_of)) {
+            $accountId = $eventData->on_behalf_of;
+        }
+
+        if ($accountId) {
+            $merchant = Merchant::where('processor_account_id', $accountId)->first();
+            if ($merchant) {
+                Log::info("Resolved merchant from platform webhook: {$merchant->business_name} ({$accountId})");
+                return $merchant;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Auto-create a transaction from a Stripe PaymentIntent webhook.
-     * Used when the payment was made directly on Stripe (not via PlutoPay API).
      */
     protected function createTransactionFromIntent(object $intent, Merchant $merchant, string $status): Transaction
     {
-        // Determine payment method type
         $pmType = 'card';
         $cardBrand = null;
         $cardLast4 = null;
 
-        $charge = $intent->charges->data[0] ?? $intent->latest_charge ?? null;
+        $charge = $this->extractCharge($intent);
         if ($charge && !empty($charge->payment_method_details)) {
             $pm = $charge->payment_method_details;
             if (($pm->type ?? null) === 'card_present') {
