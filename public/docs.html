@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlutoPay API Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #fafafa;
+            --bg-card: #ffffff;
+            --bg-code: #0f172a;
+            --bg-code-inline: #f1f5f9;
+            --bg-sidebar: #ffffff;
+            --bg-sidebar-active: #f1f5f9;
+            --bg-badge: #dbeafe;
+            --text: #0f172a;
+            --text-secondary: #64748b;
+            --text-code: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --accent: #2563eb;
+            --accent-light: #eff6ff;
+            --green: #16a34a;
+            --green-bg: #dcfce7;
+            --orange: #ea580c;
+            --orange-bg: #fff7ed;
+            --red: #dc2626;
+            --red-bg: #fef2f2;
+            --blue: #2563eb;
+            --blue-bg: #dbeafe;
+            --purple: #7c3aed;
+            --purple-bg: #ede9fe;
+            --yellow: #ca8a04;
+            --yellow-bg: #fef9c3;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Top Nav ── */
+        .topnav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            height: 56px; background: #fff; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 24px;
+        }
+        .topnav-logo {
+            font-size: 18px; font-weight: 700; color: var(--text);
+            letter-spacing: -0.03em; display: flex; align-items: center; gap: 8px;
+        }
+        .topnav-logo span { color: var(--accent); }
+        .topnav-badge {
+            font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+            padding: 2px 8px; border-radius: 99px; background: var(--accent-light);
+            color: var(--accent); text-transform: uppercase;
+        }
+        .topnav-right {
+            margin-left: auto; display: flex; align-items: center; gap: 16px;
+        }
+        .topnav-right a {
+            font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
+            text-decoration: none; transition: color 0.15s;
+        }
+        .topnav-right a:hover { color: var(--accent); }
+
+        /* ── Layout ── */
+        .layout {
+            display: grid; grid-template-columns: 260px 1fr;
+            margin-top: 56px; min-height: calc(100vh - 56px);
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            position: fixed; top: 56px; left: 0; bottom: 0; width: 260px;
+            background: var(--bg-sidebar); border-right: 1px solid var(--border);
+            overflow-y: auto; padding: 20px 0;
+        }
+        .sidebar-section {
+            padding: 0 16px; margin-bottom: 8px;
+        }
+        .sidebar-title {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--text-muted); padding: 12px 12px 6px;
+        }
+        .sidebar a {
+            display: block; padding: 6px 12px; margin: 1px 0;
+            font-size: 13.5px; font-weight: 400; color: var(--text-secondary);
+            text-decoration: none; border-radius: 6px; transition: all 0.12s;
+        }
+        .sidebar a:hover { color: var(--text); background: var(--bg-sidebar-active); }
+        .sidebar a.active {
+            color: var(--accent); background: var(--accent-light); font-weight: 500;
+        }
+
+        /* ── Content ── */
+        .content {
+            grid-column: 2; padding: 40px 48px 80px; max-width: 900px;
+        }
+
+        /* ── Typography ── */
+        h1 {
+            font-size: 32px; font-weight: 700; letter-spacing: -0.03em;
+            margin-bottom: 12px; line-height: 1.2;
+        }
+        h2 {
+            font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+            margin: 48px 0 16px; padding-top: 32px;
+            border-top: 1px solid var(--border-light);
+        }
+        h2:first-of-type { border-top: none; padding-top: 0; margin-top: 32px; }
+        h3 {
+            font-size: 16px; font-weight: 600; margin: 28px 0 10px;
+        }
+        p { margin-bottom: 16px; color: var(--text-secondary); font-size: 15px; }
+        .lead { font-size: 17px; color: var(--text-secondary); margin-bottom: 32px; }
+
+        /* ── Code ── */
+        code {
+            font-family: 'JetBrains Mono', monospace; font-size: 13px;
+        }
+        code:not(pre code) {
+            background: var(--bg-code-inline); padding: 2px 6px;
+            border-radius: 4px; font-size: 13px; color: #be185d;
+        }
+        pre {
+            background: var(--bg-code); color: var(--text-code);
+            border-radius: 10px; padding: 20px 24px; margin: 16px 0 24px;
+            overflow-x: auto; font-size: 13px; line-height: 1.65;
+            border: 1px solid #1e293b;
+        }
+        pre .comment { color: #64748b; }
+        pre .string { color: #86efac; }
+        pre .key { color: #93c5fd; }
+        pre .number { color: #fbbf24; }
+        pre .method { color: #c4b5fd; }
+        pre .url { color: #67e8f9; }
+
+        /* ── Tables ── */
+        table {
+            width: 100%; border-collapse: collapse; margin: 16px 0 24px;
+            font-size: 14px;
+        }
+        th {
+            text-align: left; padding: 10px 14px; font-weight: 600; font-size: 12px;
+            text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
+            border-bottom: 2px solid var(--border);
+        }
+        td {
+            padding: 10px 14px; border-bottom: 1px solid var(--border-light);
+            color: var(--text-secondary);
+        }
+        td code { font-size: 12.5px; }
+        td:first-child { color: var(--text); font-weight: 500; }
+
+        /* ── Badges ── */
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 11.5px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.02em; text-transform: uppercase;
+        }
+        .badge-get { background: var(--green-bg); color: var(--green); }
+        .badge-post { background: var(--blue-bg); color: var(--blue); }
+        .badge-put { background: var(--orange-bg); color: var(--orange); }
+        .badge-patch { background: var(--orange-bg); color: var(--orange); }
+        .badge-delete { background: var(--red-bg); color: var(--red); }
+
+        /* ── Endpoint Block ── */
+        .endpoint {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px 20px; margin: 16px 0;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .endpoint-path {
+            font-family: 'JetBrains Mono', monospace; font-size: 14px;
+            font-weight: 500; color: var(--text);
+        }
+
+        /* ── Callout ── */
+        .callout {
+            border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+            font-size: 14px; display: flex; gap: 10px;
+        }
+        .callout-info {
+            background: var(--accent-light); border: 1px solid #bfdbfe;
+        }
+        .callout-warn {
+            background: var(--yellow-bg); border: 1px solid #fde68a;
+        }
+        .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+        .callout p { margin: 0; color: var(--text); }
+
+        /* ── Section dividers ── */
+        .section { scroll-margin-top: 72px; }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 24px 20px 60px; }
+        }
+
+        /* ── Scrollbar ── */
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        pre::-webkit-scrollbar { height: 4px; }
+        pre::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <!-- Top Nav -->
+    <nav class="topnav">
+        <div class="topnav-logo">
+            PlutoPay <span>Docs</span>
+            <span class="topnav-badge">v1</span>
+        </div>
+        <div class="topnav-right">
+            <a href="#introduction">API Reference</a>
+            <a href="https://plutopayus.com/dashboard" target="_blank">Dashboard &rarr;</a>
+        </div>
+    </nav>
+
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Getting Started</div>
+                <a href="#introduction" class="active">Introduction</a>
+                <a href="#authentication">Authentication</a>
+                <a href="#errors">Errors</a>
+                <a href="#pagination">Pagination</a>
+                <a href="#idempotency">Idempotency</a>
+                <a href="#test-mode">Test Mode</a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">Core Resources</div>
+                <a href="#merchant">Merchant</a>
+                <a href="#transactions">Transactions</a>
+                <a href="#customers">Customers</a>
+                <a href="#refunds">Refunds</a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">Terminal / POS</div>
+                <a href="#terminals">Terminals</a>
+                <a href="#terminal-payments">Terminal Payments</a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">Other</div>
+                <a href="#payouts">Payouts</a>
+                <a href="#disputes">Disputes</a>
+                <a href="#webhooks">Webhooks</a>
+                <a href="#webhook-endpoints">Webhook Endpoints</a>
+            </div>
+        </aside>
+
+        <!-- Content -->
+        <main class="content">
+
+            <!-- ═══════════════════ INTRODUCTION ═══════════════════ -->
+            <section id="introduction" class="section">
+                <h1>PlutoPay API Reference</h1>
+                <p class="lead">
+                    The PlutoPay API is a RESTful interface for processing payments, managing terminals,
+                    and handling all aspects of your payment infrastructure. Use it to accept in-person and online
+                    payments, manage customers, configure webhooks, and more.
+                </p>
+
+                <h3>Base URL</h3>
+                <pre><span class="url">https://plutopayus.com/api/v1</span></pre>
+
+                <h3>Quick Example</h3>
+<pre><span class="comment"># Create a payment</span>
+curl <span class="url">https://plutopayus.com/api/v1/transactions</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_your_secret_key"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d '{
+    <span class="key">"amount"</span>: <span class="number">2500</span>,
+    <span class="key">"currency"</span>: <span class="string">"usd"</span>,
+    <span class="key">"description"</span>: <span class="string">"Order #1234"</span>
+  }'</pre>
+
+                <h3>Health Check</h3>
+                <div class="endpoint">
+                    <span class="badge badge-get">GET</span>
+                    <span class="endpoint-path">/v1/health</span>
+                </div>
+                <p>Returns the API status, version, and current server timestamp. No authentication required.</p>
+            </section>
+
+            <!-- ═══════════════════ AUTHENTICATION ═══════════════════ -->
+            <section id="authentication" class="section">
+                <h2>Authentication</h2>
+                <p>
+                    The PlutoPay API uses API keys to authenticate requests. You can manage your API keys
+                    from the <strong>Dashboard &rarr; API Keys</strong> section.
+                </p>
+                <p>
+                    Each merchant has two types of keys:
+                </p>
+                <table>
+                    <thead>
+                        <tr><th>Key Type</th><th>Prefix</th><th>Usage</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Secret Key</td>
+                            <td><code>sk_live_</code> / <code>sk_test_</code></td>
+                            <td>Server-side. Full access to all API endpoints.</td>
+                        </tr>
+                        <tr>
+                            <td>Publishable Key</td>
+                            <td><code>pk_live_</code> / <code>pk_test_</code></td>
+                            <td>Client-side. Limited access (e.g., creating connection tokens).</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>Include your secret key in the <code>Authorization</code> header as a Bearer token:</p>
+<pre>curl <span class="url">https://plutopayus.com/api/v1/merchant</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_your_secret_key"</span></pre>
+
+                <div class="callout callout-warn">
+                    <span class="callout-icon">⚠️</span>
+                    <p><strong>Keep your secret keys secure.</strong> Never expose them in client-side code, public repositories, or browser requests. Use publishable keys for frontend integrations.</p>
+                </div>
+            </section>
+
+            <!-- ═══════════════════ ERRORS ═══════════════════ -->
+            <section id="errors" class="section">
+                <h2>Errors</h2>
+                <p>The API uses standard HTTP status codes and returns errors in a consistent format:</p>
+<pre>{
+  <span class="key">"error"</span>: {
+    <span class="key">"type"</span>: <span class="string">"payment_error"</span>,
+    <span class="key">"message"</span>: <span class="string">"Insufficient funds."</span>
+  }
+}</pre>
+
+                <table>
+                    <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>200</code></td><td>Success</td></tr>
+                        <tr><td><code>201</code></td><td>Created successfully</td></tr>
+                        <tr><td><code>400</code></td><td>Bad request &mdash; invalid parameters</td></tr>
+                        <tr><td><code>401</code></td><td>Unauthorized &mdash; missing or invalid API key</td></tr>
+                        <tr><td><code>403</code></td><td>Forbidden &mdash; insufficient permissions</td></tr>
+                        <tr><td><code>404</code></td><td>Not found</td></tr>
+                        <tr><td><code>422</code></td><td>Validation error</td></tr>
+                        <tr><td><code>500</code></td><td>Server error</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Error Types</h3>
+                <table>
+                    <thead><tr><th>Type</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>authentication_error</code></td><td>Invalid or missing API key</td></tr>
+                        <tr><td><code>payment_error</code></td><td>Payment processing failed</td></tr>
+                        <tr><td><code>capture_error</code></td><td>Failed to capture an authorized payment</td></tr>
+                        <tr><td><code>cancel_error</code></td><td>Failed to cancel a payment</td></tr>
+                        <tr><td><code>terminal_error</code></td><td>Terminal operation failed</td></tr>
+                        <tr><td><code>invalid_request</code></td><td>Request parameters are invalid</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ═══════════════════ PAGINATION ═══════════════════ -->
+            <section id="pagination" class="section">
+                <h2>Pagination</h2>
+                <p>List endpoints return paginated results. Use the <code>page</code> and <code>size</code> parameters to control pagination.</p>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Default</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>page</code></td><td><code>1</code></td><td>Page number</td></tr>
+                        <tr><td><code>size</code></td><td><code>10</code></td><td>Items per page (max 100)</td></tr>
+                    </tbody>
+                </table>
+<pre><span class="comment"># Get page 2 with 25 items per page</span>
+curl <span class="url">https://plutopayus.com/api/v1/transactions?page=2&size=25</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_..."</span></pre>
+
+                <p>Paginated responses include metadata:</p>
+<pre>{
+  <span class="key">"data"</span>: [...],
+  <span class="key">"meta"</span>: {
+    <span class="key">"current_page"</span>: <span class="number">2</span>,
+    <span class="key">"last_page"</span>: <span class="number">5</span>,
+    <span class="key">"per_page"</span>: <span class="number">25</span>,
+    <span class="key">"total"</span>: <span class="number">112</span>
+  }
+}</pre>
+            </section>
+
+            <!-- ═══════════════════ IDEMPOTENCY ═══════════════════ -->
+            <section id="idempotency" class="section">
+                <h2>Idempotency</h2>
+                <p>
+                    To safely retry requests without processing them twice, include an <code>idempotency_key</code>
+                    in the request body. If a transaction with the same key already exists, the existing transaction
+                    is returned instead of creating a new one.
+                </p>
+<pre>curl <span class="url">https://plutopayus.com/api/v1/transactions</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_..."</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d '{
+    <span class="key">"amount"</span>: <span class="number">5000</span>,
+    <span class="key">"currency"</span>: <span class="string">"usd"</span>,
+    <span class="key">"idempotency_key"</span>: <span class="string">"order_12345_attempt_1"</span>
+  }'</pre>
+            </section>
+
+            <!-- ═══════════════════ TEST MODE ═══════════════════ -->
+            <section id="test-mode" class="section">
+                <h2>Test Mode</h2>
+                <p>
+                    PlutoPay provides a full sandbox environment for development. Use your test API keys
+                    (<code>sk_test_...</code>) to create test transactions that don't process real payments.
+                </p>
+                <div class="callout callout-info">
+                    <span class="callout-icon">💡</span>
+                    <p>Test mode mirrors production behavior exactly. All API endpoints, webhook events, and terminal flows work identically in both modes.</p>
+                </div>
+            </section>
+
+            <!-- ═══════════════════ MERCHANT ═══════════════════ -->
+            <section id="merchant" class="section">
+                <h2>Merchant</h2>
+                <p>Retrieve information about the authenticated merchant account.</p>
+
+                <div class="endpoint">
+                    <span class="badge badge-get">GET</span>
+                    <span class="endpoint-path">/v1/merchant</span>
+                </div>
+
+                <h3>Response</h3>
+<pre>{
+  <span class="key">"id"</span>: <span class="string">"019c374b-0df7-7033-af02-9c7357f7890e"</span>,
+  <span class="key">"business_name"</span>: <span class="string">"Nexo Barbershop"</span>,
+  <span class="key">"display_name"</span>: <span class="string">"Nexo"</span>,
+  <span class="key">"email"</span>: <span class="string">"info@nexobarbershop.com"</span>,
+  <span class="key">"phone"</span>: <span class="string">"+1234567890"</span>,
+  <span class="key">"country"</span>: <span class="string">"US"</span>,
+  <span class="key">"default_currency"</span>: <span class="string">"usd"</span>,
+  <span class="key">"status"</span>: <span class="string">"active"</span>,
+  <span class="key">"kyc_status"</span>: <span class="string">"verified"</span>,
+  <span class="key">"test_mode"</span>: <span class="number">false</span>,
+  <span class="key">"created_at"</span>: <span class="string">"2026-02-07T09:30:56+00:00"</span>
+}</pre>
+            </section>
+
+            <!-- ═══════════════════ TRANSACTIONS ═══════════════════ -->
+            <section id="transactions" class="section">
+                <h2>Transactions</h2>
+                <p>Transactions represent payments processed through PlutoPay. You can create, retrieve, capture, cancel, and refund transactions.</p>
+
+                <h3>Endpoints</h3>
+                <div class="endpoint">
+                    <span class="badge badge-get">GET</span>
+                    <span class="endpoint-path">/v1/transactions</span>
+                </div>
+                <div class="endpoint">
+                    <span class="badge badge-post">POST</span>
+                    <span class="endpoint-path">/v1/transactions</span>
+                </div>
+                <div class="endpoint">
+                    <span class="badge badge-get">GET</span>
+                    <span class="endpoint-path">/v1/transactions/{id}</span>
+                </div>
+                <div class="endpoint">
+                    <span class="badge badge-post">POST</span>
+                    <span class="endpoint-path">/v1/transactions/{id}/capture</span>
+                </div>
+                <div class="endpoint">
+                    <span class="badge badge-post">POST</span>
+                    <span class="endpoint-path">/v1/transactions/{id}/cancel</span>
+                </div>
+
+                <h3>Create a Transaction</h3>
+                <p>Create a new payment. All amounts are in the smallest currency unit (e.g., cents for USD).</p>
+
+                <table>
+                    <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>amount</code></td><td>integer</td><td>Yes</td><td>Amount in cents (min: 50)</td></tr>
+                        <tr><td><code>currency</code></td><td>string</td><td>No</td><td>Three-letter ISO code. Defaults to merchant's currency.</td></tr>
+                        <tr><td><code>payment_method</code></td><td>string</td><td>No</td><td>Payment method ID</td></tr>
+                        <tr><td><code>payment_method_type</code></td><td>string</td><td>No</td><td><code>card</code>, <code>wallet</code>, <code>bank_transfer</code>, <code>terminal</code></td></tr>
+                        <tr><td><code>confirm</code></td><td>boolean</td><td>No</td><td>Immediately confirm the payment</td></tr>
+                        <tr><td><code>capture_method</code></td><td>string</td><td>No</td><td><code>automatic</code> or <code>manual</code></td></tr>
+                        <tr><td><code>customer_id</code></td><td>uuid</td><td>No</td><td>Attach payment to a customer</td></tr>
+                        <tr><td><code>description</code></td><td>string</td><td>No</td><td>Internal description (max 500)</td></tr>
+                        <tr><td><code>receipt_email</code></td><td>string</td><td>No</td><td>Email for the receipt</td></tr>
+                        <tr><td><code>metadata</code></td><td>object</td><td>No</td><td>Key-value metadata</td></tr>
+                        <tr><td><code>idempotency_key</code></td><td>string</td><td>No</td><td>Unique key for idempotent requests</td></tr>
+                    </tbody>
+                </table>
+
+<pre><span class="comment"># Create a payment</span>
+curl -X <span class="method">POST</span> <span class="url">https://plutopayus.com/api/v1/transactions</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_..."</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d '{
+    <span class="key">"amount"</span>: <span class="number">2500</span>,
+    <span class="key">"currency"</span>: <span class="string">"usd"</span>,
+    <span class="key">"payment_method_type"</span>: <span class="string">"card"</span>,
+    <span class="key">"description"</span>: <span class="string">"Haircut + Beard Trim"</span>,
+    <span class="key">"metadata"</span>: {
+      <span class="key">"order_id"</span>: <span class="string">"ORD-1234"</span>
+    }
+  }'</pre>
+
+                <h3>Transaction Object</h3>
+<pre>{
+  <span class="key">"id"</span>: <span class="string">"019c3770-a922-7219-a12d-7297ae5bfbc3"</span>,
+  <span class="key">"reference"</span>: <span class="string">"txn_khk3BqXBIoC8IeJhrnpF"</span>,
+  <span class="key">"type"</span>: <span class="string">"payment"</span>,
+  <span class="key">"status"</span>: <span class="string">"succeeded"</span>,
+  <span class="key">"amount"</span>: <span class="number">2500</span>,
+  <span class="key">"amount_formatted"</span>: <span class="string">"$25.00"</span>,
+  <span class="key">"amount_refunded"</span>: <span class="number">0</span>,
+  <span class="key">"currency"</span>: <span class="string">"usd"</span>,
+  <span class="key">"payment_method_type"</span>: <span class="string">"terminal"</span>,
+  <span class="key">"description"</span>: <span class="string">"Haircut + Beard Trim"</span>,
+  <span class="key">"customer_id"</span>: <span class="number">null</span>,
+  <span class="key">"terminal_id"</span>: <span class="string">"019c3770-..."</span>,
+  <span class="key">"metadata"</span>: { <span class="key">"order_id"</span>: <span class="string">"ORD-1234"</span> },
+  <span class="key">"captured_at"</span>: <span class="string">"2026-02-16T16:18:00+00:00"</span>,
+  <span class="key">"created_at"</span>: <span class="string">"2026-02-16T16:18:00+00:00"</span>
+}</pre>
+
+                <h3>Transaction Statuses</h3>
+                <table>
+                    <thead><tr><th>Status</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>pending</code></td><td>Payment created, awaiting confirmation</td></tr>
+                        <tr><td><code>succeeded</code></td><td>Payment successfully completed</td></tr>
+                        <tr><td><code>failed</code></td><td>Payment was declined or failed</td></tr>
+                        <tr><td><code>canceled</code></td><td>Payment was canceled before completion</td></tr>
+                        <tr><td><code>refunded</code></td><td>Full refund issued</td></tr>
+                        <tr><td><code>partially_refunded</code></td><td>Partial refund issued</td></tr>
+                        <tr><td><code>requires_capture</code></td><td>Authorized, waiting to be captured</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>List Transactions</h3>
+                <p>Retrieve a list of transactions with optional filters:</p>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>search</code></td><td>Search by reference, description, or receipt email</td></tr>
+                        <tr><td><code>status</code></td><td>Filter by status</td></tr>
+                        <tr><td><code>payment_method_type</code></td><td>Filter by method type</td></tr>
+                        <tr><td><code>date_from</code></td><td>Filter from date (YYYY-MM-DD)</td></tr>
+                        <tr><td><code>date_to</code></td><td>Filter to date (YYYY-MM-DD)</td></tr>
+                        <tr><td><code>sortField</code></td><td>Sort by field (e.g., <code>amount</code>, <code>created_at</code>)</td></tr>
+                        <tr><td><code>sortOrder</code></td><td><code>asc</code> or <code>desc</code></td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Capture a Transaction</h3>
+                <p>Capture a payment that was created with <code>capture_method: manual</code>.</p>
+<pre>curl -X <span class="method">POST</span> <span class="url">https://plutopayus.com/api/v1/transactions/{id}/capture</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_..."</span> \
+  -d '{ <span class="key">"amount"</span>: <span class="number">2000</span> }'  <span class="comment"># Optional: capture less than authorized</span></pre>
+
+                <h3>Cancel a Transaction</h3>
+                <p>Cancel a pending or uncaptured payment.</p>
+<pre>curl -X <span class="method">POST</span> <span class="url">https://plutopayus.com/api/v1/transactions/{id}/cancel</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_..."</span></pre>
+            </section>
+
+            <!-- ═══════════════════ CUSTOMERS ═══════════════════ -->
+            <section id="customers" class="section">
+                <h2>Customers</h2>
+                <p>Manage your customer records. Customers can be linked to transactions for tracking and reporting.</p>
+
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/customers</span></div>
+                <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/v1/customers</span></div>
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/customers/{id}</span></div>
+                <div class="endpoint"><span class="badge badge-put">PUT</span><span class="endpoint-path">/v1/customers/{id}</span></div>
+                <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/v1/customers/{id}</span></div>
+
+                <h3>Create a Customer</h3>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>email</code></td><td>string</td><td>Customer email</td></tr>
+                        <tr><td><code>name</code></td><td>string</td><td>Full name</td></tr>
+                        <tr><td><code>phone</code></td><td>string</td><td>Phone number</td></tr>
+                        <tr><td><code>external_id</code></td><td>string</td><td>Your system's customer ID</td></tr>
+                        <tr><td><code>address_line1</code></td><td>string</td><td>Street address</td></tr>
+                        <tr><td><code>city</code></td><td>string</td><td>City</td></tr>
+                        <tr><td><code>state</code></td><td>string</td><td>State / Region</td></tr>
+                        <tr><td><code>postal_code</code></td><td>string</td><td>ZIP / Postal code</td></tr>
+                        <tr><td><code>country</code></td><td>string</td><td>Two-letter country code</td></tr>
+                        <tr><td><code>metadata</code></td><td>object</td><td>Key-value metadata</td></tr>
+                    </tbody>
+                </table>
+
+<pre>curl -X <span class="method">POST</span> <span class="url">https://plutopayus.com/api/v1/customers</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_..."</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d '{
+    <span class="key">"name"</span>: <span class="string">"John Smith"</span>,
+    <span class="key">"email"</span>: <span class="string">"john@example.com"</span>,
+    <span class="key">"phone"</span>: <span class="string">"+1 555-0123"</span>
+  }'</pre>
+
+                <h3>List Filters</h3>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>search</code></td><td>Search by name, email, or phone</td></tr>
+                        <tr><td><code>email</code></td><td>Filter by exact email</td></tr>
+                        <tr><td><code>country</code></td><td>Filter by country code</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ═══════════════════ REFUNDS ═══════════════════ -->
+            <section id="refunds" class="section">
+                <h2>Refunds</h2>
+                <p>Create full or partial refunds on completed transactions.</p>
+
+                <div class="endpoint">
+                    <span class="badge badge-post">POST</span>
+                    <span class="endpoint-path">/v1/transactions/{transaction_id}/refunds</span>
+                </div>
+
+<pre>curl -X <span class="method">POST</span> <span class="url">https://plutopayus.com/api/v1/transactions/{id}/refunds</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_..."</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d '{
+    <span class="key">"amount"</span>: <span class="number">1000</span>
+  }'</pre>
+
+                <div class="callout callout-info">
+                    <span class="callout-icon">💡</span>
+                    <p>If no <code>amount</code> is specified, a full refund is issued. The refund amount cannot exceed the original transaction amount minus any previous refunds.</p>
+                </div>
+            </section>
+
+            <!-- ═══════════════════ TERMINALS ═══════════════════ -->
+            <section id="terminals" class="section">
+                <h2>Terminals</h2>
+                <p>Manage your POS terminal fleet &mdash; register, monitor, and configure physical readers.</p>
+
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/terminals</span></div>
+                <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/v1/terminals</span></div>
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/terminals/{id}</span></div>
+                <div class="endpoint"><span class="badge badge-put">PUT</span><span class="endpoint-path">/v1/terminals/{id}</span></div>
+                <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/v1/terminals/{id}</span></div>
+
+                <h3>Register a Terminal</h3>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>name</code></td><td>string</td><td>Yes</td><td>Display name for the terminal</td></tr>
+                        <tr><td><code>registration_code</code></td><td>string</td><td>No</td><td>Code from the terminal device for pairing</td></tr>
+                        <tr><td><code>location_name</code></td><td>string</td><td>No</td><td>Store or branch name</td></tr>
+                        <tr><td><code>location_address</code></td><td>string</td><td>No</td><td>Physical address</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>List Filters</h3>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>status</code></td><td><code>online</code>, <code>offline</code>, <code>pairing</code></td></tr>
+                        <tr><td><code>location_name</code></td><td>Filter by location (partial match)</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ═══════════════════ TERMINAL PAYMENTS ═══════════════════ -->
+            <section id="terminal-payments" class="section">
+                <h2>Terminal Payments</h2>
+                <p>Process in-person payments using your POS terminals. PlutoPay supports both client-driven (SDK) and server-driven payment flows.</p>
+
+                <h3>Connection Token</h3>
+                <div class="endpoint">
+                    <span class="badge badge-post">POST</span>
+                    <span class="endpoint-path">/v1/terminal/connection-token</span>
+                </div>
+                <p>Generate a connection token for the Terminal SDK. Required to initialize the reader in your client app.</p>
+
+                <h3>Create Terminal Payment</h3>
+                <div class="endpoint">
+                    <span class="badge badge-post">POST</span>
+                    <span class="endpoint-path">/v1/terminal/create-payment</span>
+                </div>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>amount</code></td><td>integer</td><td>Yes</td><td>Amount in cents</td></tr>
+                        <tr><td><code>currency</code></td><td>string</td><td>No</td><td>Defaults to merchant's currency</td></tr>
+                        <tr><td><code>terminal_id</code></td><td>uuid</td><td>No</td><td>Specific terminal to use</td></tr>
+                        <tr><td><code>description</code></td><td>string</td><td>No</td><td>Payment description</td></tr>
+                        <tr><td><code>customer_id</code></td><td>uuid</td><td>No</td><td>Link to a customer</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Process Payment (Server-Driven)</h3>
+                <div class="endpoint">
+                    <span class="badge badge-post">POST</span>
+                    <span class="endpoint-path">/v1/terminal/process-payment</span>
+                </div>
+                <p>Push a payment to a specific reader for collection. The reader will prompt the customer to tap/insert their card.</p>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>payment_intent_id</code></td><td>string</td><td>Yes</td><td>The payment intent ID from create-payment</td></tr>
+                        <tr><td><code>reader_id</code></td><td>string</td><td>Yes</td><td>The reader's processor terminal ID</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Simulate Payment (Test Mode)</h3>
+                <div class="endpoint">
+                    <span class="badge badge-post">POST</span>
+                    <span class="endpoint-path">/v1/terminal/simulate-payment</span>
+                </div>
+                <p>Simulate a card present on a test reader. Only available in test mode.</p>
+
+                <h3>List Readers</h3>
+                <div class="endpoint">
+                    <span class="badge badge-get">GET</span>
+                    <span class="endpoint-path">/v1/terminal/readers</span>
+                </div>
+                <p>Get all terminal readers for the authenticated merchant with their current status.</p>
+            </section>
+
+            <!-- ═══════════════════ PAYOUTS ═══════════════════ -->
+            <section id="payouts" class="section">
+                <h2>Payouts</h2>
+                <p>View payout records. Payouts represent transfers of funds from PlutoPay to your bank account.</p>
+
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/payouts</span></div>
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/payouts/{id}</span></div>
+
+                <h3>List Filters</h3>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>status</code></td><td><code>paid</code>, <code>pending</code>, <code>in_transit</code>, <code>failed</code></td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ═══════════════════ DISPUTES ═══════════════════ -->
+            <section id="disputes" class="section">
+                <h2>Disputes</h2>
+                <p>View disputes (chargebacks) filed against transactions.</p>
+
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/disputes</span></div>
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/disputes/{id}</span></div>
+
+                <h3>List Filters</h3>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>status</code></td><td><code>needs_response</code>, <code>under_review</code>, <code>won</code>, <code>lost</code></td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ═══════════════════ WEBHOOKS ═══════════════════ -->
+            <section id="webhooks" class="section">
+                <h2>Webhooks</h2>
+                <p>
+                    PlutoPay sends real-time event notifications to your server via webhooks. Configure
+                    endpoints to receive events like successful payments, refunds, terminal status changes, and more.
+                </p>
+
+                <h3>Event Types</h3>
+                <table>
+                    <thead><tr><th>Event</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>payment.succeeded</code></td><td>A payment was successfully completed</td></tr>
+                        <tr><td><code>payment.failed</code></td><td>A payment attempt failed</td></tr>
+                        <tr><td><code>payment.canceled</code></td><td>A payment was canceled</td></tr>
+                        <tr><td><code>refund.created</code></td><td>A refund was issued</td></tr>
+                        <tr><td><code>dispute.created</code></td><td>A dispute was opened</td></tr>
+                        <tr><td><code>payout.paid</code></td><td>A payout was sent to your bank</td></tr>
+                        <tr><td><code>payout.failed</code></td><td>A payout failed</td></tr>
+                        <tr><td><code>terminal.connected</code></td><td>A terminal came online</td></tr>
+                        <tr><td><code>terminal.disconnected</code></td><td>A terminal went offline</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Webhook Payload</h3>
+<pre>{
+  <span class="key">"id"</span>: <span class="string">"evt_1234567890"</span>,
+  <span class="key">"type"</span>: <span class="string">"payment.succeeded"</span>,
+  <span class="key">"created_at"</span>: <span class="string">"2026-02-16T16:18:00+00:00"</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="string">"019c3770-a922-..."</span>,
+    <span class="key">"reference"</span>: <span class="string">"txn_khk3BqXBIoC8IeJhrnpF"</span>,
+    <span class="key">"amount"</span>: <span class="number">2500</span>,
+    <span class="key">"currency"</span>: <span class="string">"usd"</span>,
+    <span class="key">"status"</span>: <span class="string">"succeeded"</span>
+  }
+}</pre>
+
+                <h3>Verifying Signatures</h3>
+                <p>
+                    Every webhook request includes a <code>X-PlutoPay-Signature</code> header containing an
+                    HMAC-SHA256 signature. Verify this to ensure the request came from PlutoPay.
+                </p>
+<pre><span class="comment"># Compute the expected signature</span>
+expected = HMAC-SHA256(webhook_secret, request_body)
+
+<span class="comment"># Compare with the header</span>
+if header_signature == expected:
+    <span class="comment"># Signature valid ✓</span></pre>
+
+                <h3>Retry Policy</h3>
+                <p>If your endpoint returns a non-2xx status code, PlutoPay retries with exponential backoff:</p>
+                <table>
+                    <thead><tr><th>Attempt</th><th>Delay</th></tr></thead>
+                    <tbody>
+                        <tr><td>1st retry</td><td>1 minute</td></tr>
+                        <tr><td>2nd retry</td><td>5 minutes</td></tr>
+                        <tr><td>3rd retry</td><td>30 minutes</td></tr>
+                        <tr><td>4th retry</td><td>2 hours</td></tr>
+                        <tr><td>5th retry</td><td>24 hours</td></tr>
+                    </tbody>
+                </table>
+                <p>After 5 failed attempts, the endpoint is marked as failing and you'll be notified.</p>
+            </section>
+
+            <!-- ═══════════════════ WEBHOOK ENDPOINTS ═══════════════════ -->
+            <section id="webhook-endpoints" class="section">
+                <h2>Webhook Endpoints</h2>
+                <p>Programmatically manage your webhook endpoint subscriptions.</p>
+
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/webhook-endpoints</span></div>
+                <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/v1/webhook-endpoints</span></div>
+                <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/v1/webhook-endpoints/{id}</span></div>
+                <div class="endpoint"><span class="badge badge-put">PUT</span><span class="endpoint-path">/v1/webhook-endpoints/{id}</span></div>
+                <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/v1/webhook-endpoints/{id}</span></div>
+                <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/v1/webhook-endpoints/{id}/test</span></div>
+
+                <h3>Create an Endpoint</h3>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>url</code></td><td>string</td><td>Yes</td><td>HTTPS URL to receive events</td></tr>
+                        <tr><td><code>events</code></td><td>array</td><td>No</td><td>Specific event types to subscribe to. Omit for all events.</td></tr>
+                        <tr><td><code>description</code></td><td>string</td><td>No</td><td>Description for your reference</td></tr>
+                    </tbody>
+                </table>
+
+<pre>curl -X <span class="method">POST</span> <span class="url">https://plutopayus.com/api/v1/webhook-endpoints</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_..."</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d '{
+    <span class="key">"url"</span>: <span class="string">"https://yourapp.com/webhooks/plutopay"</span>,
+    <span class="key">"events"</span>: [<span class="string">"payment.succeeded"</span>, <span class="string">"refund.created"</span>],
+    <span class="key">"description"</span>: <span class="string">"Production webhook"</span>
+  }'</pre>
+
+                <div class="callout callout-info">
+                    <span class="callout-icon">🔑</span>
+                    <p>The webhook <code>secret</code> is only returned when creating the endpoint. Store it securely &mdash; you'll need it to verify webhook signatures.</p>
+                </div>
+
+                <h3>Test an Endpoint</h3>
+                <p>Send a test event to verify your endpoint is receiving and processing webhooks correctly.</p>
+<pre>curl -X <span class="method">POST</span> <span class="url">https://plutopayus.com/api/v1/webhook-endpoints/{id}/test</span> \
+  -H <span class="string">"Authorization: Bearer sk_live_..."</span></pre>
+            </section>
+
+            <!-- Footer -->
+            <div style="margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--border-light); text-align: center;">
+                <p style="font-size: 13px; color: var(--text-muted);">
+                    &copy; 2026 PlutoPay by Sadeim Inc. All rights reserved.
+                </p>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // Active sidebar link
+        const links = document.querySelectorAll('.sidebar a');
+        const sections = document.querySelectorAll('.section');
+
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    links.forEach(l => l.classList.remove('active'));
+                    const active = document.querySelector(`.sidebar a[href="#${entry.target.id}"]`);
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-80px 0px -60% 0px' });
+
+        sections.forEach(s => observer.observe(s));
+    </script>
+</body>
+</html>
