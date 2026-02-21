@@ -9,6 +9,7 @@ use App\Models\Payout;
 use App\Models\Dispute;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class StripeWebhookController extends Controller
 {
@@ -118,6 +119,13 @@ class StripeWebhookController extends Controller
     protected function handlePaymentSucceeded(object $intent, ?Merchant $merchant = null): void
     {
         $txn = $this->findTransaction($intent->id, $merchant);
+
+        // Auto-create transaction if not found but merchant exists
+        if (!$txn && $merchant) {
+            $txn = $this->createTransactionFromIntent($intent, $merchant, 'succeeded');
+            Log::info("Auto-created transaction from webhook: {$txn->reference} for {$merchant->business_name}");
+        }
+
         if (!$txn) return;
 
         $updateData = [
@@ -126,8 +134,9 @@ class StripeWebhookController extends Controller
         ];
 
         // Extract card info if available
-        if (!empty($intent->charges->data[0]->payment_method_details)) {
-            $pm = $intent->charges->data[0]->payment_method_details;
+        $charge = $intent->charges->data[0] ?? $intent->latest_charge ?? null;
+        if ($charge && !empty($charge->payment_method_details)) {
+            $pm = $charge->payment_method_details;
             if (($pm->type ?? null) === 'card' && !empty($pm->card)) {
                 $updateData['card_brand'] = $pm->card->brand ?? $txn->card_brand;
                 $updateData['card_last_four'] = $pm->card->last4 ?? $txn->card_last_four;
@@ -150,8 +159,8 @@ class StripeWebhookController extends Controller
         }
 
         // Receipt URL
-        if (!empty($intent->charges->data[0]->receipt_url)) {
-            $updateData['receipt_url'] = $intent->charges->data[0]->receipt_url;
+        if ($charge && !empty($charge->receipt_url)) {
+            $updateData['receipt_url'] = $charge->receipt_url;
         }
 
         $txn->update($updateData);
@@ -162,6 +171,13 @@ class StripeWebhookController extends Controller
     protected function handlePaymentFailed(object $intent, ?Merchant $merchant = null): void
     {
         $txn = $this->findTransaction($intent->id, $merchant);
+
+        // Auto-create if not found
+        if (!$txn && $merchant) {
+            $txn = $this->createTransactionFromIntent($intent, $merchant, 'failed');
+            Log::info("Auto-created failed transaction from webhook: {$txn->reference}");
+        }
+
         if (!$txn) return;
 
         $failureMessage = $intent->last_payment_error->message ?? 'Payment failed';
@@ -180,6 +196,13 @@ class StripeWebhookController extends Controller
     protected function handlePaymentCanceled(object $intent, ?Merchant $merchant = null): void
     {
         $txn = $this->findTransaction($intent->id, $merchant);
+
+        // Auto-create if not found
+        if (!$txn && $merchant) {
+            $txn = $this->createTransactionFromIntent($intent, $merchant, 'canceled');
+            Log::info("Auto-created canceled transaction from webhook: {$txn->reference}");
+        }
+
         if (!$txn) return;
 
         $txn->update(['status' => 'canceled']);
@@ -209,7 +232,6 @@ class StripeWebhookController extends Controller
         $chargeId = $dispute->charge;
         Log::info("Dispute created for charge: {$chargeId}", ['reason' => $dispute->reason ?? 'unknown']);
     }
-
 
     protected function handlePayoutCreatedOrUpdated(object $payout, ?Merchant $merchant = null): void
     {
@@ -243,7 +265,7 @@ class StripeWebhookController extends Controller
         } else {
             Payout::create([
                 'merchant_id' => $merchant->id,
-                'reference' => 'po_' . \Illuminate\Support\Str::random(20),
+                'reference' => 'po_' . Str::random(20),
                 'amount' => $payout->amount,
                 'fee' => 0,
                 'net_amount' => $payout->amount,
@@ -314,5 +336,56 @@ class StripeWebhookController extends Controller
         }
 
         return $query->first();
+    }
+
+    /**
+     * Auto-create a transaction from a Stripe PaymentIntent webhook.
+     * Used when the payment was made directly on Stripe (not via PlutoPay API).
+     */
+    protected function createTransactionFromIntent(object $intent, Merchant $merchant, string $status): Transaction
+    {
+        // Determine payment method type
+        $pmType = 'card';
+        $cardBrand = null;
+        $cardLast4 = null;
+
+        $charge = $intent->charges->data[0] ?? $intent->latest_charge ?? null;
+        if ($charge && !empty($charge->payment_method_details)) {
+            $pm = $charge->payment_method_details;
+            if (($pm->type ?? null) === 'card_present') {
+                $pmType = 'terminal';
+                $cardBrand = $pm->card_present->brand ?? null;
+                $cardLast4 = $pm->card_present->last4 ?? null;
+            } elseif (($pm->type ?? null) === 'card') {
+                $pmType = 'card';
+                $cardBrand = $pm->card->brand ?? null;
+                $cardLast4 = $pm->card->last4 ?? null;
+            }
+        }
+
+        $tipAmount = $intent->amount_details->tip->amount ?? 0;
+
+        return Transaction::create([
+            'merchant_id' => $merchant->id,
+            'reference' => 'txn_' . Str::random(20),
+            'type' => 'payment',
+            'status' => $status,
+            'amount' => $intent->amount,
+            'currency' => $intent->currency,
+            'tip_amount' => $tipAmount,
+            'amount_refunded' => $charge->amount_refunded ?? 0,
+            'payment_method_type' => $pmType,
+            'card_brand' => $cardBrand,
+            'card_last_four' => $cardLast4,
+            'description' => $intent->description ?? 'Payment via Stripe',
+            'receipt_email' => $intent->receipt_email ?? null,
+            'source' => 'stripe_direct',
+            'processor_type' => 'stripe',
+            'processor_transaction_id' => $intent->id,
+            'is_test' => $merchant->test_mode,
+            'captured_at' => $status === 'succeeded' ? now() : null,
+            'failed_at' => $status === 'failed' ? now() : null,
+            'receipt_url' => $charge->receipt_url ?? null,
+        ]);
     }
 }
